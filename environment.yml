@@ -1,0 +1,27 @@
+name: cell_mrcnn
+# in order of priority: highest (top) to lowest (bottom)
+channels:
+  - anaconda
+  - conda-forge
+dependencies:
+  - python>=3.4
+  - numpy
+  - scipy
+  - cython
+  - matplotlib
+  - scikit-image
+  - tensorflow-gpu>=1.3.0,<2.0.0
+  - keras>=2.0.8,<=2.2.4
+  - h5py
+  - imgaug
+  - pip
+  - ipykernel
+  - pycocotools
+  - opencv
+  - imgaug
+  - pillow
+  - read-roi
+  - nd2reader=3.2.1
+  - jupyter
+  - pydot # dependancy for plotting keras model
+  - graphviz # for pydot
