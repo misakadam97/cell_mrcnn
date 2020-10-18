@@ -246,6 +246,7 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True,
         div_fnb: divide the number of filters by this amount to spare memory
     """
     assert architecture in ["resnet18", "resnet50", "resnet101"]
+    assert div_fnb % 1 == 0
     if architecture is "resnet18":
         # Stage 1
         x = KL.ZeroPadding2D((3, 3))(input_image)
@@ -254,31 +255,30 @@ def resnet_graph(input_image, architecture, stage5=False, train_bn=True,
         x = KL.Activation('relu')(x)
         C1 = x = KL.MaxPooling2D((3, 3), strides=(2, 2), padding="same")(x)
         # Stage 2
-        x = small_conv_block(x, 3, [64, 64], stage=2, block='a',
+        x = small_conv_block(x, 3, [64//div_fnb, 64//div_fnb], stage=2, block='a',
                              strides=(1, 1), train_bn=train_bn)
-        C2 = x = small_identity_block(x, 3, [64, 64],
+        C2 = x = small_identity_block(x, 3, [64//div_fnb, 64//div_fnb],
                            stage=2, block='b', train_bn=train_bn)
         # Stage 3
-        x = small_conv_block(x, 3, [128, 128],
+        x = small_conv_block(x, 3, [128//div_fnb, 128//div_fnb],
                        stage=3, block='a', train_bn=train_bn)
         C3 = x = small_identity_block(x, 3,
-                                [128, 128],
+                                [128//div_fnb, 128//div_fnb],
                                 stage=3, block='b', train_bn=train_bn)
         # Stage 4
-        x = small_conv_block(x, 3, [256, 256],
+        x = small_conv_block(x, 3, [256//div_fnb, 256//div_fnb],
                        stage=4, block='a', train_bn=train_bn)
-        C4 = x = small_identity_block(x, 3, [256, 256],
+        C4 = x = small_identity_block(x, 3, [256//div_fnb, 256//div_fnb],
                                stage=4, block='b', train_bn=train_bn)
         # Stage 5
         if stage5:
-            x = small_conv_block(x, 3, [512, 512],
+            x = small_conv_block(x, 3, [512//div_fnb, 512//div_fnb],
                            stage=5, block='a', train_bn=train_bn)
-            C5 = x = small_identity_block(x, 3, [512, 512], stage=5, block='b',
+            C5 = x = small_identity_block(x, 3, [512//div_fnb, 512//div_fnb], stage=5, block='b',
                                     train_bn=train_bn)
         else:
             C5 = None
     else:
-        assert div_fnb % 1 == 0
         # Stage 1
         x = KL.ZeroPadding2D((3, 3))(input_image)
         x = KL.Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=True)(x)

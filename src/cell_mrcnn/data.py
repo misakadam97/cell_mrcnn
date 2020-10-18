@@ -1,4 +1,4 @@
-from os import listdir, walk, mkdir
+from os import listdir, walk, mkdir, path
 from os.path import isfile, join, isdir
 from glob import glob
 import sys
@@ -68,6 +68,23 @@ def cell_groups_to_bg(image, roi_set):
         im[rr,cc] = mask[rr,cc]
     return im
 
+
+def reao_roi_or_roiset(impath):
+
+    impath = impath.split('.')[0]
+    # if rois are in a zip (image contains multiple rois)
+    if path.isfile(join(impath + '_RoiSet.zip')):
+        rois = read_roi.read_roi_zip(
+            join(impath + '_RoiSet.zip'))
+    # if roi is in roi format(image only contains 1 roi)
+    elif path.isfile(join(impath + '.roi')):
+        rois = read_roi.read_roi_file(join(impath + '.roi'))
+    else:
+        print("rois couldn't be found for:", impath)
+
+    return rois
+
+
 class CellTransformData(utils.Dataset):
 
     def load_cell(self, dataset_dir=dataset_dir, output_dir=
@@ -107,12 +124,11 @@ class CellTransformData(utils.Dataset):
             #                 }
             #        ...more regions
             #       }
-            rois = read_roi.read_roi_zip(
-                join(dataset_dir, id + '_RoiSet.zip'))
+            rois = reao_roi_or_roiset(join(dataset_dir,id))
             cg_keys = [key for key in rois.keys() if 'cell_group' in key]
             for k in cg_keys:
                 rois.pop(k)
-            im_path = dataset_dir + '/' + id + '.png'
+            im_path = join(dataset_dir, image_name)
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, RoI doesn't include it, so we must read
             # the image. This is only managable since the dataset is tiny.
@@ -186,14 +202,13 @@ class CellTransformData(utils.Dataset):
         # Randomly choose70% of images to be training data.
         # image_names = [file_name for file_name in listdir(dataset_dir) if
         #                'png' in file_name]
+        # np.random.seed(seed=546)
         # train_set = np.random.choice(image_names, int(len(image_names) * 0.7),
         #                              replace=False)
 
         # randomly choose 70% of the crops to be training data. This way a
         # part of an image will be training data, the other part test data
-
-
-        np.random.seed(seed=546)
+        # np.random.seed(seed=546)
         train_set = np.random.choice(range(len(idxs)), int(len(idxs) * 0.7),
                                      replace=False)
 
@@ -254,7 +269,7 @@ class CellTransformData(utils.Dataset):
             # When I add th vesicules as 2nd class, here will go the class ids
 
             # save resized, cropped image and scaled cropped masks
-            if n in train_set:
+            if np.random.random() < 0.7:
                 train_image_number += 1
                 output_dir = crop_dir + 'train/'
             else:
@@ -295,16 +310,15 @@ def show_im_and_mask(im, mask):
 if __name__ == '__main__':
     # load the dataset
     data_path = src_path.split('src')[0] + 'data/'
-    transfer_w3_channel_images(data_path)
-    nd2 = ND2Reader(data_path + 'arrestin_dots_20200124.nd2')
-    for i, im in enumerate(nd2):
-        bit8 = convert_to_bit8(im)
-        png = Image.fromarray(bit8)
-        png.save(data_path + str(i) + '.png')
+    # transfer_w3_channel_images(data_path)
+    # nd2 = ND2Reader(data_path + 'arrestin_dots_20200124.nd2')
+    # for i, im in enumerate(nd2):
+    #     bit8 = convert_to_bit8(im)
+    #     png = Image.fromarray(bit8)
+    #     png.save(data_path + str(i) + '.png')
     # convert cell groups that can't be annotated to background noise
     for im_path in glob(dataset_dir + '*.png'):
-        roi_set_path = im_path.split('.')[0] + '_RoiSet.zip'
-        roi_set = read_roi.read_roi_zip(roi_set_path)
+        roi_set = reao_roi_or_roiset(im_path.split('.')[0])
         image = skimage.io.imread(im_path)
         image = cell_groups_to_bg(image, roi_set)
         image = Image.fromarray(image)

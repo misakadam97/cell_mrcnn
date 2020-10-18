@@ -101,7 +101,7 @@ class CellConfig(Config):
 
     # my 1050ti is oom
     BACKBONE = "resnet18"
-    DIV_FILTERNB = 1
+    DIV_FILTERNB = 2
     # ROIs kept after non-maximum supression (training and inference)
     POST_NMS_ROIS_TRAINING = 562
     POST_NMS_ROIS_INFERENCE = 1024
@@ -283,7 +283,8 @@ if __name__ == '__main__':
                                   model_dir=DEFAULT_LOGS_DIR)
 
     # weights_path = COCO_WEIGHTS_PATH
-    model.load_weights('/home/miska/repos/cell_mrcnn/logs/cell20201016T0008/mask_rcnn_cell_0010.h5')#, by_name=True, exclude=[
+    # model.load_weights('/home/miska/repos/cell_mrcnn/logs/cell20201016T0008
+    # /mask_rcnn_cell_0010.h5')#, by_name=True, exclude=[
     #     "mrcnn_class_logits", "mrcnn_bbox_fc",
     #     "mrcnn_bbox", "mrcnn_mask", "conv1"])
     train(model)
