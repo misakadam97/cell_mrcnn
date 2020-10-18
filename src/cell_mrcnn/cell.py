@@ -1,6 +1,5 @@
 """
 Mask R-CNN
-Train on the LIDC dataset.
 
 Copyright (c) 2018 Matterport, Inc.
 Licensed under the MIT License (see LICENSE for details)
@@ -226,14 +225,12 @@ def train(model):
     # Training dataset.
     dataset_train = CellDataset()
     # dataset_train.load_cell(args.dataset, "train")
-    dataset_train.load_cell('/home/miska/repos/hulab_mrcnn/data/pngs/crops/',
-                              "train")
+    dataset_train.load_cell(join(ROOT_DIR, 'data/pngs/crops/'), "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = CellDataset()
-    dataset_val.load_cell('/home/miska/repos/hulab_mrcnn/data/pngs/crops/',
-                            "val")
+    dataset_val.load_cell(join(ROOT_DIR, 'data/pngs/crops/'), "val")
     dataset_val.prepare()
 
     # Image augmentation
@@ -245,9 +242,7 @@ def train(model):
                    iaa.Affine(rotate=180),
                    iaa.Affine(rotate=270)]),
         iaa.GaussianBlur(sigma=(0.0, 1.0)),
-        # the intensity inside cells is sometimes only greater by 1-3 than
-        # the bg, so this augmentation might make those cells unrecognisable
-        iaa.Add((-5, 5)),
+        iaa.Add((-10, 10)),
         iaa.Multiply((0.8, 1.5)),
         # iaa.GaussianBlur(sigma=(0,3.0))
     ])
@@ -266,7 +261,7 @@ def train(model):
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=20,
+                epochs=50,
                 augmentation=augmentation,
                 layers='all')
 
