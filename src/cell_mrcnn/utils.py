@@ -18,6 +18,7 @@ import scipy
 import skimage.color
 import skimage.io
 import skimage.transform
+from skimage.morphology import binary_dilation, binary_erosion
 import urllib.request
 import shutil
 import warnings
@@ -26,6 +27,7 @@ from cell_mrcnn import __file__ as path
 from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
+from copy import deepcopy
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -934,58 +936,31 @@ def convert_to_bit8(image):
     return ar
 
 
-def calc_layers(image, mini_mask, layer=0):
-    """
+def calc_layers(image, mask):
+    if image.ndim == 3:
+        image = image[:,:,0]
+    all_cells = []
+    bbox = extract_bboxes(mask)
+    for idx in range(mask.shape[2]):  # get each cell
+        cell = []
+        mask_ = mask[:, :, idx]
+        bbox_ = bbox[idx]
+        mini_mask = mask_[bbox_[0] - 10:bbox_[2] + 10, bbox_[1] - 10:bbox_[3] + 10]
+        mini_image = image[bbox_[0] - 10:bbox_[2] + 10, bbox_[1] - 10:bbox_[3] + 10]
+        mask_big = deepcopy(mini_mask).astype(int)
+        mask_small = deepcopy(mini_mask).astype(int)
+        mask_smaller = deepcopy(mini_mask).astype(int)
+        # for i in range(10):
+        #     mask_bigger = binary_dilation(mask_big).astype(int)
+        #     mask_diff = mask_bigger - mask_big
+        #     cell.append((mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
+        #     mask_big = mask_bigger.copy()
+        for i in range(50):
+            if mask_smaller.sum() > 0:
+                mask_smaller = binary_erosion(mask_small).astype(int)
+                mask_diff = mask_small - mask_smaller
+                cell.append((mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
+                mask_small = deepcopy(mask_smaller)
+        all_cells.append(cell)
 
-    :param image: bbox part of the image that contains the  cell
-    :param mini_mask: the mini_mask of the cell
-    :param layer:
-    :return: the layer-wise average intesity values inside the cell
-    """
-
-    if layer == 0:
-        avgs = []
-    idxs = []
-    col_idx = np.arange(layer, mini_mask.shape[0] - (1 + layer))
-    for col in range(layer, mini_mask.shape[1] - (1 + layer)):
-
-        index_ar = col_idx * mini_mask[layer:-(1 + layer), col]
-
-        try:
-            upper = index_ar[index_ar > 0][0]
-            idxs.append((upper, col))
-        except IndexError:
-            pass
-        try:
-            lower = index_ar[index_ar > 0][-1]
-            idxs.append((lower, col))
-        except IndexError:
-            pass
-
-    row_idx = np.arange(layer, mini_mask.shape[1] - (1 + layer))
-    for row in range(0 + layer, mini_mask.shape[0] - (1 + layer)):
-        index_ar = row_idx * mini_mask[row, layer:-(1 + layer)]
-        try:
-            left = index_ar[index_ar > 0][0]
-            idxs.append((row, left))
-        except IndexError:
-            pass
-        try:
-            right = index_ar[index_ar > 0][-1]
-            idxs.append((row, right))
-        except IndexError:
-            pass
-
-    if len(idxs) > 20:
-        pixel_values = []
-        for i in idxs:
-            pixel_values.append(image[i[0], i[1]])
-            mini_mask[i[0], i[1]] = 0
-        #     zero[i[0], i[1]] = 255
-        # plt.imshow(zero)
-        # plt.pause(2)
-        avgs.append(np.array(pixel_values).mean())
-        layer += 1
-        get_layers(image, mini_mask, layer)
-    else:
-        return avgs
+    return all_cells
