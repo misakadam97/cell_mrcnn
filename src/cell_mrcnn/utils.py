@@ -24,7 +24,6 @@ import warnings
 from distutils.version import LooseVersion
 from cell_mrcnn import __file__ as path
 from PIL import Image
-from nd2reader import ND2Reader
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -738,6 +737,9 @@ def compute_ap(gt_boxes, gt_class_ids, gt_masks,
         pred_boxes, pred_class_ids, pred_scores, pred_masks,
         iou_threshold)
 
+    # todo: this only calculates ap for 1 image, if the pred_matches nad
+    #  gt_matches of multiple images would be concated (and the indexes
+    #  updated accoringly), maybe the code from here work the same way?
     # Compute precision and recall at each prediction box step
     precisions = np.cumsum(pred_match > -1) / (np.arange(len(pred_match)) + 1)
     recalls = np.cumsum(pred_match > -1).astype(np.float32) / len(gt_match)
@@ -924,8 +926,66 @@ def convert_to_bit8(image):
     """
     # the images are 16 bit, but most pixel values are <5k, so we won't lose
     # too much relevant info by converting like this
+    #todo: background noise level is ~500, so substract that
     ar = np.array(image)
     ar = ar / 5000 * (2**8-1)
     ar[ar > (2**8-1)] = (2**8-1)
     ar = ar.astype(np.uint8)
     return ar
+
+
+def calc_layers(image, mini_mask, layer=0):
+    """
+
+    :param image: bbox part of the image that contains the  cell
+    :param mini_mask: the mini_mask of the cell
+    :param layer:
+    :return: the layer-wise average intesity values inside the cell
+    """
+
+    if layer == 0:
+        avgs = []
+    idxs = []
+    col_idx = np.arange(layer, mini_mask.shape[0] - (1 + layer))
+    for col in range(layer, mini_mask.shape[1] - (1 + layer)):
+
+        index_ar = col_idx * mini_mask[layer:-(1 + layer), col]
+
+        try:
+            upper = index_ar[index_ar > 0][0]
+            idxs.append((upper, col))
+        except IndexError:
+            pass
+        try:
+            lower = index_ar[index_ar > 0][-1]
+            idxs.append((lower, col))
+        except IndexError:
+            pass
+
+    row_idx = np.arange(layer, mini_mask.shape[1] - (1 + layer))
+    for row in range(0 + layer, mini_mask.shape[0] - (1 + layer)):
+        index_ar = row_idx * mini_mask[row, layer:-(1 + layer)]
+        try:
+            left = index_ar[index_ar > 0][0]
+            idxs.append((row, left))
+        except IndexError:
+            pass
+        try:
+            right = index_ar[index_ar > 0][-1]
+            idxs.append((row, right))
+        except IndexError:
+            pass
+
+    if len(idxs) > 20:
+        pixel_values = []
+        for i in idxs:
+            pixel_values.append(image[i[0], i[1]])
+            mini_mask[i[0], i[1]] = 0
+        #     zero[i[0], i[1]] = 255
+        # plt.imshow(zero)
+        # plt.pause(2)
+        avgs.append(np.array(pixel_values).mean())
+        layer += 1
+        get_layers(image, mini_mask, layer)
+    else:
+        return avgs
