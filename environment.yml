@@ -25,3 +25,5 @@ dependencies:
   - jupyter
   - pydot # dependancy for plotting keras model
   - graphviz # for pydot
+  - pip:
+      - streamlit
