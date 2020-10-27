@@ -964,3 +964,61 @@ def calc_layers(image, mask):
         all_cells.append(cell)
 
     return all_cells
+
+
+def calc_map_for_multiple_images(dataset):
+    # calculate mAP across multiple images
+    #todo: fix the row, col update (maybe start from 1 and then if j % 3 row
+    # += 1?
+    ax = get_ax(rows=2, cols=3, size=6)
+    row,col = 0,0
+    map_dict = {}
+    for j, iou in enumerate([0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]):
+        print(iou, end=': ')
+        for i, image_id in enumerate(dataset.image_ids):
+            image, image_meta, gt_class_id, gt_bbox, gt_mask =\
+            modellib.load_image_gt(dataset, config, image_id, use_mini_mask=False)
+            results = model.detect([image], verbose=0)
+            r = results[0]
+            gt_match, pred_match, overlaps = utils.compute_matches(
+                gt_bbox, gt_class_id, gt_mask,
+                r['rois'], r['class_ids'], r['scores'], r['masks'], iou_threshold=iou)
+
+            if i == 0:
+                gts = gt_match.copy()
+                preds = pred_match.copy()
+            else:
+                g_temp = gt_match.copy()
+                g_temp[g_temp!=-1] = g_temp[g_temp != -1]+(gts.max()+1)
+                p_temp = pred_match.copy()
+                p_temp[p_temp!=-1] = p_temp[p_temp!=-1]+(preds.max()+1)
+                gts = np.concatenate([gts, g_temp])
+                preds = np.concatenate([preds, p_temp])
+
+        precisions = np.cumsum(preds > -1) / (np.arange(len(preds)) + 1)
+        recalls = np.cumsum(preds > -1).astype(np.float32) / len(gts)
+
+        # Pad with start and end values to simplify the math
+        precisions = np.concatenate([[0], precisions, [0]])
+        recalls = np.concatenate([[0], recalls, [1]])
+
+        # Ensure precision values decrease but don't increase. This way, the
+        # precision value at each recall threshold is the maximum it can be
+        # for all following recall thresholds, as specified by the VOC paper.
+        for i in range(len(precisions) - 2, -1, -1):
+            precisions[i] = np.maximum(precisions[i], precisions[i + 1])
+
+        # Compute mean AP over recall range
+        indices = np.where(recalls[:-1] != recalls[1:])[0] + 1
+        mAP = np.sum((recalls[indices] - recalls[indices - 1]) *
+                     precisions[indices])
+        map_dict[iou] = mAP
+
+        # Draw precision-recall curve
+        visualize.plot_precision_recall(mAP, precisions, recalls,IoU=iou, ax=ax[row,col])
+        col += 1
+        if j == 2:
+            row += 1
+            col = 0
+
+    return map_dict, precisions, recalls
