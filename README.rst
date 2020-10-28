@@ -22,8 +22,9 @@ Install
 
 
 To run the app:
-docker build -f Dockerfile -t mrcnn .
-docker run -it -p 6123:6123 --name mrcnn mrcnn:latest
+
+1) docker build -f Dockerfile -t mrcnn .
+2) docker run -it -p 6123:6123 --name mrcnn mrcnn:latest
 
 
 Note
