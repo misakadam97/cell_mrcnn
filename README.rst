@@ -21,6 +21,11 @@ Install
 6) ipython kernel install --user --name=cell_mrcnn #add kernel for jupyter notebook
 
 
+To run the app:
+docker build -f Dockerfile -t mrcnn .
+docker run -it -p 6123:6123 --name mrcnn mrcnn:latest
+
+
 Note
 ====
 
