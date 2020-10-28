@@ -39,34 +39,39 @@ DEVICE = "/cpu:0"  # /cpu:0 or /gpu:0
 # values: 'inference' or 'training'
 # TODO: code for 'training' test mode not ready yet
 TEST_MODE = "inference"
-with tf.device(DEVICE):
-    model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
-                              config=config)
-weights_path = "/home/mrcnn/logs/mask_rcnn_cell_0024.h5"
-st.write("Loading weights ", weights_path)
-model.load_weights(weights_path, by_name=True)
 
-for image in images:
-    image = skimage.io.imread(image)
-    # If grayscale
-    # add new dim so shape goes from (512,512) -> (512,512,1); and then
-    # at model building i think it'll become (1,512,512,1). Other option is
-    # to change the whole keras model which seems like more complicated
+analyze = st.button('Analyze')
 
-    if image.ndim < 3:
-        image = image[..., np.newaxis]
-    # If has an alpha channel, remove it for consistency
-    if image.shape[-1] == 4:
-        image = image[..., :3]
+if analyze:
+    with tf.device(DEVICE):
+        model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
+                                  config=config)
+    weights_path = "/home/mrcnn/logs/mask_rcnn_cell_0024.h5"
+    st.write("Loading weights ", weights_path)
+    model.load_weights(weights_path, by_name=True)
 
-    results = model.detect([image], verbose=0)
-    r = results[0]
-    fig = visualize.display_instances(skimage.color.gray2rgb(image[:,:,0]),
-                                 r['rois'], r['masks'],
-                                r['class_ids'], ['cell']*len(r['class_ids']),r['scores'])
-    st.pyplot(fig)
-    layers = calc_layers(image, r['masks'])
-    try:
-        st.write(layers)
-    except:
-        st.write(str(layers))
+
+    for image in images:
+        image = skimage.io.imread(image)
+        # If grayscale
+        # add new dim so shape goes from (512,512) -> (512,512,1); and then
+        # at model building i think it'll become (1,512,512,1). Other option is
+        # to change the whole keras model which seems like more complicated
+
+        if image.ndim < 3:
+            image = image[..., np.newaxis]
+        # If has an alpha channel, remove it for consistency
+        if image.shape[-1] == 4:
+            image = image[..., :3]
+
+        results = model.detect([image], verbose=0)
+        r = results[0]
+        fig = visualize.display_instances(skimage.color.gray2rgb(image[:,:,0]),
+                                     r['rois'], r['masks'],
+                                    r['class_ids'], ['cell']*len(r['class_ids']),r['scores'])
+        st.pyplot(fig)
+        layers = calc_layers(image, r['masks'])
+        try:
+            st.write(layers)
+        except:
+            st.write(str(layers))
