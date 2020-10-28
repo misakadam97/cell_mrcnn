@@ -28,6 +28,7 @@ imgaug
 IPython[all]
 pycocotools
 read-roi
-nd2reader=3.2.1
+nd2reader==3.2.1
 pydot
 graphviz
+streamlit
