@@ -30,3 +30,4 @@ nd2reader==3.2.1
 pydot
 graphviz
 streamlit
+keras>=2.0.8,<=2.2.4

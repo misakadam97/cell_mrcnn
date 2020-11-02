@@ -19,6 +19,14 @@ ROOT_DIR = path.split('src')[0]
 MODEL_DIR = join(ROOT_DIR, "logs")
 
 
+if tf.test.gpu_device_name(): 
+
+    st.write('Default GPU Device:{}'.format(tf.test.gpu_device_name()))
+
+else:
+
+    st.write("Please install GPU version of TF")
+
 config = cell.CellInferenceConfig()
 class InferenceConfig(config.__class__):
     # Run detection on one image at a time
@@ -62,7 +70,7 @@ if analyze:
     with tf.device(DEVICE):
         model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
                                   config=config)
-    weights_path = join(MODEL_DIR, "cell20201018T1949/mask_rcnn_cell_0024.h5")
+    weights_path = join("/home/mrcnn/logs/mask_rcnn_cell_0024.h5")
     st.write("Loading weights ", weights_path)
     model.load_weights(weights_path, by_name=True)
 
