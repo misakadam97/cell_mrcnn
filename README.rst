@@ -24,7 +24,7 @@ Install
 To run the app:
 
 1) docker build -f Dockerfile -t mrcnn .
-2) docker run -it -p 6123:6123 --name mrcnn mrcnn:latest
+2) docker run -it -p 6333:6333 --gpus all --name mrcnn mrcnn:latest
 
 
 Note

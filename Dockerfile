@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.1-base-ubuntu16.04
+FROM tensorflow/tensorflow:1.15.4-gpu
 
 ENV PATH="/root/miniconda3/bin:${PATH}"
 ARG PATH="/root/miniconda3/bin:${PATH}"
