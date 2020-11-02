@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.15.0-gpu-jupyter
+FROM tensorflow/tensorflow:1.15.0-gpu
 ADD environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml
 RUN mkdir /home/mrcnn
@@ -10,4 +10,4 @@ SHELL ["conda", "run", "-n", "cell_mrcnn", "/bin/bash", "-c"]
 RUN python /home/mrcnn/setup.py install
 RUN pip install streamlit
 RUN pip install scikit-image
-CMD streamlit run app/cell_app.py --server.port 6123
+CMD streamlit run app/cell_app.py --server.port 6333
