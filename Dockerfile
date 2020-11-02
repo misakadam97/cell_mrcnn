@@ -1,6 +1,8 @@
 FROM tensorflow/tensorflow:1.15.0-gpu
 ADD environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml
+COPY requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
 RUN mkdir /home/mrcnn
 WORKDIR /home/mrcnn
 COPY . .
