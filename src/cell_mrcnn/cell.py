@@ -108,8 +108,8 @@ class CellConfig(Config):
 
     # # Random crops of size
     IMAGE_RESIZE_MODE = "crop"
-    IMAGE_MIN_DIM = 512
-    IMAGE_MAX_DIM = 512
+    IMAGE_MIN_DIM = 1024
+    IMAGE_MAX_DIM = 1024
 
     # If enabled, resizes instance masks to a smaller size to reduce
     # memory load. Recommended when using high-resolution images.

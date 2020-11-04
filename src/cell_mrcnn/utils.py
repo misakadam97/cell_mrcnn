@@ -28,6 +28,7 @@ from PIL import Image
 from matplotlib import pyplot as plt
 import numpy as np
 from copy import deepcopy
+import streamlit as st
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -945,8 +946,8 @@ def calc_layers(image, mask):
         cell = []
         mask_ = mask[:, :, idx]
         bbox_ = bbox[idx]
-        mini_mask = mask_[bbox_[0] - 10:bbox_[2] + 10, bbox_[1] - 10:bbox_[3] + 10]
-        mini_image = image[bbox_[0] - 10:bbox_[2] + 10, bbox_[1] - 10:bbox_[3] + 10]
+        mini_mask = mask_[bbox_[0]:bbox_[2], bbox_[1]:bbox_[3]]
+        mini_image = image[bbox_[0]:bbox_[2], bbox_[1]:bbox_[3]]
         mask_big = deepcopy(mini_mask).astype(int)
         mask_small = deepcopy(mini_mask).astype(int)
         mask_smaller = deepcopy(mini_mask).astype(int)
@@ -974,7 +975,6 @@ def calc_map_for_multiple_images(dataset):
     row,col = 0,0
     map_dict = {}
     for j, iou in enumerate([0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]):
-        print(iou, end=': ')
         for i, image_id in enumerate(dataset.image_ids):
             image, image_meta, gt_class_id, gt_bbox, gt_mask =\
             modellib.load_image_gt(dataset, config, image_id, use_mini_mask=False)
