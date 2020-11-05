@@ -10,12 +10,12 @@ RUN wget \
     https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh \
     && mkdir /root/.conda \
     && bash Miniconda3-latest-Linux-x86_64.sh -b \
-    && rm -f Miniconda3-latest-Linux-x86_64.sh 
+    && rm -f Miniconda3-latest-Linux-x86_64.sh
 RUN conda --version
 
 ADD environment.yml /tmp/environment.yml
 RUN conda env create -f /tmp/environment.yml
-RUN mkdir /home/mrcnn 
+RUN mkdir /home/mrcnn
 WORKDIR /home/mrcnn
 COPY . .
 RUN echo "source activate $(head -1 /tmp/environment.yml | cut -d' ' -f2)" > ~/.bashrc
@@ -28,4 +28,5 @@ RUN apt-get update && \
 RUN python /home/mrcnn/setup.py install
 RUN pip install streamlit
 RUN pip install scikit-image
+RUN python save_model.py
 CMD streamlit run app/cell_app.py --server.port 6333
