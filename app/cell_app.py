@@ -84,7 +84,7 @@ def generate_image_paths(data_directory, group_tag, channel_tags):
     return paths
 config = InferenceConfig()
 config.display()
-DEVICE = "/cpu:0"  # /cpu:0 or /gpu:0
+DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
 TEST_MODE = "inference"
 
 st.title('Cell prediction, concentric intensity measurement')
@@ -139,7 +139,7 @@ if mask_image_channels and layers_image_channels:
         with tf.device(DEVICE):
             model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
                                       config=config)
-        weights_path = join(MODEL_DIR, "cell20201018T1949/mask_rcnn_cell_0024.h5")
+        weights_path = join("/home/mrcnn/logs/mask_rcnn_cell_0024.h5")
         st.write("Loading weights ", weights_path)
         model.load_weights(weights_path, by_name=True)
 
@@ -202,12 +202,3 @@ if mask_image_channels and layers_image_channels:
                     mask_ = mask_.convert(mode='1')
                     mask_.save(join(group_dir, pos + '_mask_' + str(m) +
                                '.png'))
-
-
-
-
-
-
-
-
-
