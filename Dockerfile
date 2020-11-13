@@ -21,12 +21,12 @@ COPY . .
 RUN echo "source activate $(head -1 /tmp/environment.yml | cut -d' ' -f2)" > ~/.bashrc
 ENV PATH /opt/conda/envs/$(head -1 /tmp/environment.yml | cut -d' ' -f2)/bin:$PATH
 SHELL ["conda", "run", "-n", "cell_mrcnn", "/bin/bash", "-c"]
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y git
+#RUN apt-get update && \
+#    apt-get upgrade -y && \
+#    apt-get install -y git
 
-RUN python /home/mrcnn/setup.py install
-RUN pip install streamlit
 RUN pip install scikit-image
-RUN python save_model.py
-CMD streamlit run app/cell_app.py --server.port 6333
+RUN pip install streamlit-ace
+#RUN python /home/mrcnn/setup.py install
+#CMD streamlit run app/cell_app.py --server.port 6333
+CMD streamlit run app/uploader.py
