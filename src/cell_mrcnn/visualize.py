@@ -501,3 +501,11 @@ def display_weight_stats(model):
                 "{:+9.4f}".format(w.std()),
             ])
     display_table(table)
+
+def show_im_and_mask(im, mask):
+    fig = plt.figure(figsize=(8, 8))
+    fig.add_subplot(1, 2, 1)
+    plt.imshow(im)
+    fig.add_subplot(1, 2, 2)
+    plt.imshow(mask)
+    plt.show()

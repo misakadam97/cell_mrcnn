@@ -2,18 +2,15 @@ from os import listdir, walk, mkdir, path
 from os.path import isfile, join, isdir
 from glob import glob
 import sys
-import json
-import datetime
 import numpy as np
 import skimage.draw
+from skimage.io import imread
 from cell_mrcnn import __file__ as src_path
-from cell_mrcnn.utils import convert_to_bit8
+from cell_mrcnn.utils import get_concentric_intensities, \
+    correct_central_brightness, subtract_bg, convert_to_bit8
 import read_roi
-import matplotlib.pyplot as plt  # skimage.io.imread gives runtimeWarinig
-import yaml
-import copy
 import gc
-from nd2reader import ND2Reader
+import pandas as pd
 
 # Root directory of the project
 ROOT_DIR = src_path.split('src')[0]
@@ -24,6 +21,47 @@ sys.path.append(ROOT_DIR)  # To find local version of the library
 from cell_mrcnn.config import Config
 from cell_mrcnn import utils
 from PIL import Image
+
+
+def get_channel_paths(folder, channel):
+    paths = glob(join(folder, '**/*.tif'), recursive = True)
+    channel_paths = []
+    for path in paths:
+        if ('thumb' not in path) and (path.split('_')[-1][:2] == channel):
+            channel_paths.append(path)
+    return channel_paths
+
+def calculate_percentiles(im_paths):
+    # takes ~2mins
+    # on 2048x2048 images the below percentiles leave about _ pixels out:
+    # 99: 42k
+    # 99.9: 4.2k
+    # 99.99: 420
+    # 99.999: 42
+    # 99.9999: 4
+    # 100: 0 , this is equal to max
+    percentiles = [99,99.9, 99.99, 99.999, 99.9999, 100]
+    perc_df = pd.DataFrame(columns=percentiles,
+                           index = pd.RangeIndex(0, len(im_paths)))
+    for i, im_path in enumerate(im_paths):
+        im = imread(im_path)
+        im = correct_central_brightness(im.astype(np.float),
+                                        get_concentric_intensities(im))
+        im = subtract_bg(im)
+        percentile_list = []
+        for perc in percentiles:
+            percentile_list.append(np.percentile(im, perc))
+        perc_df.loc[i, :] = percentile_list
+
+    perc_df.loc["min", :] = perc_df.min(axis=0)
+    perc_df.loc["max", :] = perc_df.loc[perc_df.index[0:-1], :].max(axis=0)
+    perc_df.loc["mean", :] = perc_df.loc[perc_df.index[0:-2], :].mean(axis=0)
+    perc_df.loc["median", :] = perc_df.loc[perc_df.index[0:-3], :].median(
+        axis=0)
+    perc_df.loc["var", :] = perc_df.loc[perc_df.index[0:-4],:].var(axis=0)
+    perc_df.loc["std", :] = perc_df.loc[perc_df.index[0:-5],:].std(axis=0)
+
+    return perc_df
 
 
 def transfer_w3_channel_images(data_dir):
@@ -43,8 +81,7 @@ def transfer_w3_channel_images(data_dir):
             continue
         if im_path.split('_')[-1][:2] != 'w3':
             continue
-        # todo skimage.io.imread might be the correct read method
-        im = plt.imread(im_path)
+        im = imread(im_path)
         im = convert_to_bit8(im)
         im = Image.fromarray(im)
         if 'cit' in im_path:
@@ -69,7 +106,7 @@ def cell_groups_to_bg(image, roi_set):
     return im
 
 
-def reao_roi_or_roiset(impath):
+def read_roi_or_roiset(impath):
 
     impath = impath.split('.')[0]
     # if rois are in a zip (image contains multiple rois)
@@ -124,7 +161,7 @@ class CellTransformData(utils.Dataset):
             #                 }
             #        ...more regions
             #       }
-            rois = reao_roi_or_roiset(join(dataset_dir,id))
+            rois = read_roi_or_roiset(join(dataset_dir, id))
             cg_keys = [key for key in rois.keys() if 'cell_group' in key]
             for k in cg_keys:
                 rois.pop(k)
@@ -132,7 +169,7 @@ class CellTransformData(utils.Dataset):
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, RoI doesn't include it, so we must read
             # the image. This is only managable since the dataset is tiny.
-            h, w = plt.imread(im_path).shape[:2]
+            h, w = imread(im_path).shape[:2]
 
             self.add_image(
                 "cell",
@@ -298,15 +335,6 @@ class CellTransformData(utils.Dataset):
         print('Average pixel value is: {}'.format(np.array(means).mean()))
 
 
-def show_im_and_mask(im, mask):
-    fig = plt.figure(figsize=(8, 8))
-    fig.add_subplot(1, 2, 1)
-    plt.imshow(im)
-    fig.add_subplot(1, 2, 2)
-    plt.imshow(mask)
-    plt.show()
-
-
 if __name__ == '__main__':
     # load the dataset
     data_path = src_path.split('src')[0] + 'data/'
@@ -318,8 +346,8 @@ if __name__ == '__main__':
     #     png.save(data_path + str(i) + '.png')
     # convert cell groups that can't be annotated to background noise
     for im_path in glob(dataset_dir + '*.png'):
-        roi_set = reao_roi_or_roiset(im_path.split('.')[0])
-        image = skimage.io.imread(im_path)
+        roi_set = read_roi_or_roiset(im_path.split('.')[0])
+        image = imread(im_path)
         image = cell_groups_to_bg(image, roi_set)
         image = Image.fromarray(image)
         image.save(im_path)

@@ -13,6 +13,7 @@ import logging
 import math
 import random
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import scipy
 import skimage.color
@@ -25,10 +26,9 @@ import warnings
 from distutils.version import LooseVersion
 from cell_mrcnn import __file__ as path
 from PIL import Image
-from matplotlib import pyplot as plt
-import numpy as np
 from copy import deepcopy
 import streamlit as st
+from matplotlib import pyplot as plt
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
@@ -108,7 +108,7 @@ def compute_overlaps_masks(masks1, masks2):
     """Computes IoU overlaps between two sets of masks.
     masks1, masks2: [Height, Width, instances]
     """
-    
+
     # If either set of masks is empty return empty result
     if masks1.shape[-1] == 0 or masks2.shape[-1] == 0:
         return np.zeros((masks1.shape[-1], masks2.shape[-1]))
@@ -317,10 +317,12 @@ class Dataset(object):
         self._image_ids = np.arange(self.num_images)
 
         # Mapping from source class and image IDs to internal IDs
-        self.class_from_source_map = {"{}.{}".format(info['source'], info['id']): id
-                                      for info, id in zip(self.class_info, self.class_ids)}
-        self.image_from_source_map = {"{}.{}".format(info['source'], info['id']): id
-                                      for info, id in zip(self.image_info, self.image_ids)}
+        self.class_from_source_map = {
+            "{}.{}".format(info['source'], info['id']): id
+            for info, id in zip(self.class_info, self.class_ids)}
+        self.image_from_source_map = {
+            "{}.{}".format(info['source'], info['id']): id
+            for info, id in zip(self.image_info, self.image_ids)}
 
         # Map sources to class_ids they support
         self.sources = list(set([i['source'] for i in self.class_info]))
@@ -368,7 +370,7 @@ class Dataset(object):
         # add new dim so shape goes from (512,512) -> (512,512,1); and then
         # at model building i think it'll become (1,512,512,1). Other option is
         # to change the whole keras model which seems like more complicated
-        
+
         if image.ndim < 3:
             image = image[..., np.newaxis]
         # If has an alpha channel, remove it for consistency
@@ -390,13 +392,15 @@ class Dataset(object):
         """
         # Override this function to load a mask from your dataset.
         # Otherwise, it returns an empty mask.
-        logging.warning("You are using the default load_mask(), maybe you need to define your own one.")
+        logging.warning(
+            "You are using the default load_mask(), maybe you need to define your own one.")
         mask = np.empty([0, 0, 0])
         class_ids = np.empty([0], np.int32)
         return mask, class_ids
 
 
-def resize_image(image, min_dim=None, max_dim=None, min_scale=None, mode="square"):
+def resize_image(image, min_dim=None, max_dim=None, min_scale=None,
+                 mode="square"):
     """Resizes an image keeping the aspect ratio unchanged.
 
     min_dim: if provided, resizes the image such that it's smaller
@@ -771,14 +775,14 @@ def compute_ap_range(gt_box, gt_class_id, gt_mask,
     """Compute AP over a range or IoU thresholds. Default range is 0.5-0.95."""
     # Default is 0.5 to 0.95 with increments of 0.05
     iou_thresholds = iou_thresholds or np.arange(0.5, 1.0, 0.05)
-    
+
     # Compute AP over range of IoU thresholds
     AP = []
     for iou_threshold in iou_thresholds:
-        ap, precisions, recalls, overlaps =\
+        ap, precisions, recalls, overlaps = \
             compute_ap(gt_box, gt_class_id, gt_mask,
-                        pred_box, pred_class_id, pred_score, pred_mask,
-                        iou_threshold=iou_threshold)
+                       pred_box, pred_class_id, pred_score, pred_mask,
+                       iou_threshold=iou_threshold)
         if verbose:
             print("AP @{:.2f}:\t {:.3f}".format(iou_threshold, ap))
         AP.append(ap)
@@ -858,7 +862,8 @@ def download_trained_weights(coco_model_path, verbose=1):
     """
     if verbose > 0:
         print("Downloading pretrained model to " + coco_model_path + " ...")
-    with urllib.request.urlopen(COCO_MODEL_URL) as resp, open(coco_model_path, 'wb') as out:
+    with urllib.request.urlopen(COCO_MODEL_URL) as resp, open(coco_model_path,
+                                                              'wb') as out:
         shutil.copyfileobj(resp, out)
     if verbose > 0:
         print("... done downloading pretrained model!")
@@ -899,7 +904,8 @@ def denorm_boxes(boxes, shape):
 
 
 def resize(image, output_shape, order=1, mode='constant', cval=0, clip=True,
-           preserve_range=False, anti_aliasing=False, anti_aliasing_sigma=None):
+           preserve_range=False, anti_aliasing=False,
+           anti_aliasing_sigma=None):
     """A wrapper for Scikit-Image resize().
 
     Scikit-Image generates warnings on every call to resize() if it doesn't
@@ -921,25 +927,123 @@ def resize(image, output_shape, order=1, mode='constant', cval=0, clip=True,
             order=order, mode=mode, cval=cval, clip=clip,
             preserve_range=preserve_range)
 
-def convert_to_bit8(image):
+
+def test_get_concentric_intensities():
+    zeros = np.zeros((128, 128))
+
+    for i in range(int(zeros.shape[0] / 2)):
+        plt.pause(0.01)
+        plt.imshow(zeros)
+        zeros[i, i:zeros.shape[0] - i] = 1
+        zeros[zeros.shape[0] - i - 1, i:zeros.shape[0] - i] = 1
+        zeros[i + 1:zeros.shape[0] - i - 1, i] = 1
+        zeros[i + 1:zeros.shape[0] - i - 1, zeros.shape[0] - i - 1] = 1
+
+
+def get_concentric_intensities(array):
+    intensities = []
+    # assume array is square and dim is even
+    for i in range(int(array.shape[0] / 2)):
+        top = array[i, i:array.shape[0] - i]
+        bot = array[array.shape[0] - i - 1, i:array.shape[0] - i]
+        left = array[i + 1:array.shape[0] - i - 1, i]
+        right = array[i + 1:array.shape[0] - i - 1, array.shape[0] - i - 1]
+        intensities.append(np.concatenate([top, bot, left, right]).mean())
+    return intensities
+
+
+def correct_central_brightness(array, concentric_intensities):
     """
-    returns an np.uint8 data type array of the given image
-    :param image:
+
+    :param array: dtype must be float
+    :param concentric_intensities:
     :return:
     """
-    # the images are 16 bit, but most pixel values are <5k, so we won't lose
-    # too much relevant info by converting like this
-    #todo: background noise level is ~500, so substract that
+
+    # the edge is brighter for some reason
+    edge_avg = np.mean(concentric_intensities[1:12])
+    corrected = deepcopy(array)
+    for i in range(int(corrected.shape[0] / 2)):
+        f = concentric_intensities[i] / edge_avg
+        corrected[i, i:corrected.shape[0] - i] /= f
+        corrected[corrected.shape[0] - i - 1, i:corrected.shape[0] - i] /= f
+        corrected[i + 1:corrected.shape[0] - i - 1, i] /= f
+        corrected[i + 1:corrected.shape[0] - i - 1,
+        corrected.shape[0] - i - 1] /= f
+
+    return corrected
+
+
+def subtract_bg(array):
+    ar = deepcopy(array)
+    hist = np.histogram(ar.flatten(),
+                        bins=np.arange(ar.min() - 0.5, ar.max() + 0.5))
+    df = pd.DataFrame({'freq': hist[0], 'pix_val': (hist[1] + 0.5)[:-1]})
+    df.loc[:, 'rel_freq'] = df['freq'] / ar.size
+
+    # the most common pixel value
+    # bg_lvl = hist[1][hist[0].argmax()] + 0.5
+
+    # the highes pixel value that has a rel_freq > 1%
+    bg_lvl = df.loc[df['rel_freq'] > 0.01, 'pix_val'].max()
+
+    ar = ar - bg_lvl
+    ar[ar < 0] = 0
+
+    return ar
+
+
+def convert_to_bit8(image, cutoff):
+    """
+    returns an np.uint8 data type array of the given image
+    :param image: a PIL image or a numpy array
+    :param cutoff: intensity cutoff chosen so pixel intensities relevant to
+    mask prediction are retained
+    for cell membrane w3 images: ~600
+    for cell membrane w2 images: ~3k
+    :return: 8 bit array w/ background subtracted
+    """
     ar = np.array(image)
-    ar = ar / 5000 * (2**8-1)
-    ar[ar > (2**8-1)] = (2**8-1)
+
+    # the images are 16 bit
+    # this should be done after bg subtraction
+    # the cutoff should be chosen based on utils.calculate_percentiles(),
+    # so pixel intensities relevant to mask prediction are retained
+    # for cell membrane w2 images: ~3k
+    # for cell membrane w3 images: ~600
+    ar = ar / cutoff * (2 ** 8 - 1)
+    ar[ar > (2 ** 8 - 1)] = (2 ** 8 - 1)
     ar = ar.astype(np.uint8)
     return ar
 
 
+def create_composite(im1, im2):
+    zeros = np.zeros((im1.shape[0], im1.shape[1])).astype(np.uint8)
+    # most ppl w/ color vision deficiency (~75%) are either deuteranomal
+    # or deuteranop (trouble w/ seeing green), so green should be the empty
+    # channel
+    comp = np.stack([im1, zeros, im2], axis=2)
+    return comp
+
+
+def preproc_pipeline(red, blue):
+    red_c = correct_central_brightness(red.astype(np.float16),
+                                       get_concentric_intensities(red)).astype(
+        np.uint16)
+    red_bg = subtract_bg(red_c)
+    blue_c = correct_central_brightness(blue.astype(np.float16),
+                                        get_concentric_intensities(
+                                            blue)).astype(np.uint16)
+    blue_bg = subtract_bg(blue_c)
+    red8 = convert_to_bit8(red_bg, 3000)
+    blue8 = convert_to_bit8(blue_bg, 600)
+
+    return create_composite(red8, blue8)
+
+
 def calc_layers(image, mask):
     if image.ndim == 3:
-        image = image[:,:,0]
+        image = image[:, :, 0]
     all_cells = []
     bbox = extract_bboxes(mask)
     for idx in range(mask.shape[2]):  # get each cell
@@ -960,7 +1064,8 @@ def calc_layers(image, mask):
             if mask_smaller.sum() > 0:
                 mask_smaller = binary_erosion(mask_small).astype(int)
                 mask_diff = mask_small - mask_smaller
-                cell.append((mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
+                cell.append((
+                                    mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
                 mask_small = deepcopy(mask_smaller)
         all_cells.append(cell)
 
@@ -969,29 +1074,32 @@ def calc_layers(image, mask):
 
 def calc_map_for_multiple_images(dataset):
     # calculate mAP across multiple images
-    #todo: fix the row, col update (maybe start from 1 and then if j % 3 row
+    # todo: fix the row, col update (maybe start from 1 and then if j % 3 row
     # += 1?
     ax = get_ax(rows=2, cols=3, size=6)
-    row,col = 0,0
+    row, col = 0, 0
     map_dict = {}
-    for j, iou in enumerate([0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95]):
+    for j, iou in enumerate(
+            [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]):
         for i, image_id in enumerate(dataset.image_ids):
-            image, image_meta, gt_class_id, gt_bbox, gt_mask =\
-            modellib.load_image_gt(dataset, config, image_id, use_mini_mask=False)
+            image, image_meta, gt_class_id, gt_bbox, gt_mask = \
+                modellib.load_image_gt(dataset, config, image_id,
+                                       use_mini_mask=False)
             results = model.detect([image], verbose=0)
             r = results[0]
             gt_match, pred_match, overlaps = utils.compute_matches(
                 gt_bbox, gt_class_id, gt_mask,
-                r['rois'], r['class_ids'], r['scores'], r['masks'], iou_threshold=iou)
+                r['rois'], r['class_ids'], r['scores'], r['masks'],
+                iou_threshold=iou)
 
             if i == 0:
                 gts = gt_match.copy()
                 preds = pred_match.copy()
             else:
                 g_temp = gt_match.copy()
-                g_temp[g_temp!=-1] = g_temp[g_temp != -1]+(gts.max()+1)
+                g_temp[g_temp != -1] = g_temp[g_temp != -1] + (gts.max() + 1)
                 p_temp = pred_match.copy()
-                p_temp[p_temp!=-1] = p_temp[p_temp!=-1]+(preds.max()+1)
+                p_temp[p_temp != -1] = p_temp[p_temp != -1] + (preds.max() + 1)
                 gts = np.concatenate([gts, g_temp])
                 preds = np.concatenate([preds, p_temp])
 
@@ -1015,7 +1123,8 @@ def calc_map_for_multiple_images(dataset):
         map_dict[iou] = mAP
 
         # Draw precision-recall curve
-        visualize.plot_precision_recall(mAP, precisions, recalls,IoU=iou, ax=ax[row,col])
+        visualize.plot_precision_recall(mAP, precisions, recalls, IoU=iou,
+                                        ax=ax[row, col])
         col += 1
         if j == 2:
             row += 1
