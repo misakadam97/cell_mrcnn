@@ -27,7 +27,6 @@ from distutils.version import LooseVersion
 from cell_mrcnn import __file__ as path
 from PIL import Image
 from copy import deepcopy
-import streamlit as st
 from matplotlib import pyplot as plt
 
 # URL from which to download the latest COCO trained weights
