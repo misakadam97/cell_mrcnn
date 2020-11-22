@@ -28,6 +28,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 """
 
 import os
+from os.path import join
 import sys
 import json
 import datetime
@@ -63,15 +64,14 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 
 
 class CellConfig(Config):
-    """Configuration for training on the LIDC dataset.
+    """Configuration for training on the 2 channel confocal dataset.
     Derives from the base Config class and overrides some values.
     """
     # Give the configuration a recognizable name
     NAME = "cell"
 
-    # we are working w/ grayscacle images
-    IMAGE_CHANNEL_COUNT = 1
-    MEAN_PIXEL = np.array([35])
+    IMAGE_CHANNEL_COUNT = 2
+    MEAN_PIXEL = np.array([4.5, 1.5])
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
@@ -81,22 +81,20 @@ class CellConfig(Config):
     NUM_CLASSES = 1 + 1  # Background + cell
 
     # Number of training steps per epoch
-    STEPS_PER_EPOCH = 200  # NUM OF TRAIN IMAGES
+    STEPS_PER_EPOCH = 200
 
-    DETECTION_MIN_CONFIDENCE = 0.8
+    DETECTION_MIN_CONFIDENCE = 0.95
 
     # Length of square anchor side in pixels
-    # cell are bigger than 32 pixels, but if vesicules are added add 8,
-    # 16 scales to the tuple
-    # RPN_ANCHOR_SCALES = (64, 128, 256)
+    # most cell are 100-200 pixel wide circles/ovals
+    RPN_ANCHOR_SCALES = (128, 256)
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
     # RPN proposals w/ an IoU  higher, than threshold get deleted, so lower
     # threshold => more filtered.
-    # overlapping cells are common(so you'd increase this), but nucleuses
-    # could ne predicted as separate cells (so you'd lower it)
-    RPN_NMS_THRESHOLD = 0.8
+    # we don't want to detect overlapping cells (so you'd lower this)
+    RPN_NMS_THRESHOLD = 0.4
 
     # my 1050ti is oom
     BACKBONE = "resnet18"
@@ -222,15 +220,15 @@ class CellDataset(utils.Dataset):
 
 def train(model):
     """Train the model."""
+    dataset_dir =  join(ROOT_DIR, 'data/annotated_datasets/2020_11_22_02_55_03/')
     # Training dataset.
     dataset_train = CellDataset()
-    # dataset_train.load_cell(args.dataset, "train")
-    dataset_train.load_cell(join(ROOT_DIR, 'data/pngs/crops/'), "train")
+    dataset_train.load_cell(dataset_dir, "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = CellDataset()
-    dataset_val.load_cell(join(ROOT_DIR, 'data/pngs/crops/'), "val")
+    dataset_val.load_cell(dataset_dir, "val")
     dataset_val.prepare()
 
     # Image augmentation
@@ -243,8 +241,7 @@ def train(model):
                    iaa.Affine(rotate=270)]),
         iaa.GaussianBlur(sigma=(0.0, 1.0)),
         iaa.Add((-10, 10)),
-        iaa.Multiply((0.8, 1.5)),
-        # iaa.GaussianBlur(sigma=(0,3.0))
+        iaa.Multiply((0.8, 1.5))
     ])
 
     # *** This training schedule is an example. Update to your needs ***
@@ -261,7 +258,7 @@ def train(model):
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=50,
+                epochs=35,
                 augmentation=augmentation,
                 layers='all')
 

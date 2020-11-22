@@ -19,7 +19,7 @@ import scipy
 import skimage.color
 import skimage.io
 import skimage.transform
-from skimage.morphology import binary_dilation, binary_erosion
+from skimage.morphology import binary_erosion, opening, closing, disk
 import urllib.request
 import shutil
 import warnings
@@ -366,10 +366,8 @@ class Dataset(object):
         """
         # Load image
         image = skimage.io.imread(self.image_info[image_id]['path'])
-        # If grayscale
-        # add new dim so shape goes from (512,512) -> (512,512,1); and then
-        # at model building i think it'll become (1,512,512,1). Other option is
-        # to change the whole keras model which seems like more complicated
+        #images are stored in RGB format, but the G channel is empty
+        image = image[:,:,[0,2]]
 
         if image.ndim < 3:
             image = image[..., np.newaxis]
@@ -952,7 +950,7 @@ def get_concentric_intensities(array):
     return intensities
 
 
-def correct_central_brightness(array, concentric_intensities):
+def correct_central_brightness(array):
     """
 
     :param array: dtype must be float
@@ -960,8 +958,9 @@ def correct_central_brightness(array, concentric_intensities):
     :return:
     """
 
+    concentric_intensities = get_concentric_intensities(array)
     # the edge is brighter for some reason
-    edge_avg = np.mean(concentric_intensities[1:12])
+    edge_avg = np.mean(concentric_intensities[1:22])
     corrected = deepcopy(array)
     for i in range(int(corrected.shape[0] / 2)):
         f = concentric_intensities[i] / edge_avg
@@ -975,20 +974,28 @@ def correct_central_brightness(array, concentric_intensities):
 
 
 def subtract_bg(array):
+    """
+
+    :param array: should be float
+    :return:
+    """
+    assert array.max() > 0, "array is all zeros"
     ar = deepcopy(array)
-    hist = np.histogram(ar.flatten(),
-                        bins=np.arange(ar.min() - 0.5, ar.max() + 0.5))
-    df = pd.DataFrame({'freq': hist[0], 'pix_val': (hist[1] + 0.5)[:-1]})
+    hist = np.histogram(ar.flatten(), bins=200)
+    df = pd.DataFrame({'freq': hist[0], 'bin_upper_limit': (hist[1])[1:]})
     df.loc[:, 'rel_freq'] = df['freq'] / ar.size
 
-    # the most common pixel value
-    # bg_lvl = hist[1][hist[0].argmax()] + 0.5
-
-    # the highes pixel value that has a rel_freq > 1%
-    bg_lvl = df.loc[df['rel_freq'] > 0.01, 'pix_val'].max()
+    bg_lvl = df.loc[df['rel_freq'] == df['rel_freq'].max(),
+                    'bin_upper_limit'].values[0]
 
     ar = ar - bg_lvl
     ar[ar < 0] = 0
+    # removes the few bright pixels that are left
+    ar = opening(ar.astype(np.uint16), disk(3))
+
+    if (ar == 0).all():
+        print("all array values have been turned to zeros during background "
+              "subtraction, prob coz there's no cell on the image")
 
     return ar
 
@@ -999,18 +1006,15 @@ def convert_to_bit8(image, cutoff):
     :param image: a PIL image or a numpy array
     :param cutoff: intensity cutoff chosen so pixel intensities relevant to
     mask prediction are retained
-    for cell membrane w3 images: ~600
-    for cell membrane w2 images: ~3k
+    for cell membrane w3 images: ~100
+    for cell membrane w2 images: ~1000
     :return: 8 bit array w/ background subtracted
     """
     ar = np.array(image)
 
     # the images are 16 bit
     # this should be done after bg subtraction
-    # the cutoff should be chosen based on utils.calculate_percentiles(),
-    # so pixel intensities relevant to mask prediction are retained
-    # for cell membrane w2 images: ~3k
-    # for cell membrane w3 images: ~600
+    # the cutoff should be chosen based on utils.calculate_percentiles()
     ar = ar / cutoff * (2 ** 8 - 1)
     ar[ar > (2 ** 8 - 1)] = (2 ** 8 - 1)
     ar = ar.astype(np.uint8)
@@ -1027,16 +1031,16 @@ def create_composite(im1, im2):
 
 
 def preproc_pipeline(red, blue):
-    red_c = correct_central_brightness(red.astype(np.float16),
-                                       get_concentric_intensities(red)).astype(
-        np.uint16)
+    red_c = correct_central_brightness(red.astype(np.float16))
     red_bg = subtract_bg(red_c)
-    blue_c = correct_central_brightness(blue.astype(np.float16),
-                                        get_concentric_intensities(
-                                            blue)).astype(np.uint16)
+
+    blue_c = correct_central_brightness(blue.astype(np.float16))
     blue_bg = subtract_bg(blue_c)
-    red8 = convert_to_bit8(red_bg, 3000)
-    blue8 = convert_to_bit8(blue_bg, 600)
+    # closes the 20 pixel wide gaps
+    # blue_closed = closing(blue_bg, disk(10))
+
+    red8 = convert_to_bit8(red_bg, 1500)
+    blue8 = convert_to_bit8(blue_bg, 150)
 
     return create_composite(red8, blue8)
 

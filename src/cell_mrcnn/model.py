@@ -22,7 +22,6 @@ import keras.backend as K
 import keras.layers as KL
 import keras.engine as KE
 import keras.models as KM
-import streamlit as st
 
 from cell_mrcnn import utils
 
@@ -2004,6 +2003,7 @@ class MaskRCNN():
             _, C2, C3, C4, C5 = config.BACKBONE(input_image, stage5=True,
                                                 train_bn=config.TRAIN_BN)
         else:
+            #todo: check if it rrunss w/o stage5
             _, C2, C3, C4, C5 = resnet_graph(input_image, config.BACKBONE,
                                              stage5=True,
                                              train_bn=config.TRAIN_BN,
