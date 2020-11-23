@@ -86,8 +86,9 @@ class CellConfig(Config):
     DETECTION_MIN_CONFIDENCE = 0.95
 
     # Length of square anchor side in pixels
-    # most cell are 100-200 pixel wide circles/ovals
-    RPN_ANCHOR_SCALES = (128, 256)
+    # Each scale is associated with a level of the pyramid
+    #todo: determine the appropriate anchor scales
+    RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
 
     # Non-max suppression threshold to filter RPN proposals.
     # You can increase this during training to generate more propsals.
@@ -138,7 +139,7 @@ class CellInferenceConfig(CellConfig):
     # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
-    # Don't resize imager for inferencing
+    # Don't resize images for inferencing
     IMAGE_RESIZE_MODE = "pad64"
 
 
