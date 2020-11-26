@@ -9,6 +9,7 @@ Written by Waleed Abdulla
 
 import sys
 import os
+from os.path import split
 import logging
 import math
 import random
@@ -1005,8 +1006,8 @@ def convert_to_bit8(image, cutoff):
     :param image: a PIL image or a numpy array
     :param cutoff: intensity cutoff chosen so pixel intensities relevant to
     mask prediction are retained
-    for cell membrane w3 images: ~100
-    for cell membrane w2 images: ~1000
+    for cell membrane w3 images: ~500
+    for cell membrane w2 images: ~3000
     :return: 8 bit array w/ background subtracted
     """
     ar = np.array(image)
@@ -1038,8 +1039,8 @@ def preproc_pipeline(red, blue):
     # closes the 20 pixel wide gaps
     # blue_closed = closing(blue_bg, disk(10))
 
-    red8 = convert_to_bit8(red_bg, 1500)
-    blue8 = convert_to_bit8(blue_bg, 150)
+    red8 = convert_to_bit8(red_bg, 3000)
+    blue8 = convert_to_bit8(blue_bg, 500)
 
     return create_composite(red8, blue8)
 
@@ -1134,3 +1135,16 @@ def calc_map_for_multiple_images(dataset):
             col = 0
 
     return map_dict, precisions, recalls
+
+
+def get_well_and_pos(path):
+    """
+
+    :param path:
+    :return: list of the well and the position number.
+    eg.: '...A01s10...' -> ['A01', '10']
+    """
+    tail_of_path = split(path)[1]
+    well_and_pos = tail_of_path.split('_')[1:3]
+    well_and_pos[1] = well_and_pos[1].replace('s', '')
+    return well_and_pos

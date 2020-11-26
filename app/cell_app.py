@@ -125,8 +125,6 @@ if mask_image_channels and layers_image_channels:
 
             if layers_image.ndim < 3:
                 layers_image = layers_image[..., np.newaxis]
-            if layers_image.dtype != np.uint8:
-                layers_image = convert_to_bit8(layers_image)
 
             image_dict[group][position] = [mask_image]
             image_dict[group][position].append(layers_image)
@@ -181,7 +179,7 @@ if mask_image_channels and layers_image_channels:
                                  unsafe_allow_html=True))
 
             fig, ax = plt.subplots()
-            # todo: use lineplot
+            # todo: use lineplot (ax.plot)
             ax.bar(np.arange(len(df_dic[group]['mean'])), df_dic[group]['mean'])
             st.pyplot(fig)
 

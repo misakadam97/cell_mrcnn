@@ -83,11 +83,13 @@ class CellConfig(Config):
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 200
 
-    DETECTION_MIN_CONFIDENCE = 0.95
+    DETECTION_MIN_CONFIDENCE = 0.98
 
     # Length of square anchor side in pixels
     # Each scale is associated with a level of the pyramid
-    #todo: determine the appropriate anchor scales
+    #todo: determine the appropriate anchor scales (basically u need to
+    # understand how the feaeture pyramide network and how the
+    # utils/generate_pyramid_anchors() work)
     RPN_ANCHOR_SCALES = (32, 64, 128, 256, 512)
 
     # Non-max suppression threshold to filter RPN proposals.

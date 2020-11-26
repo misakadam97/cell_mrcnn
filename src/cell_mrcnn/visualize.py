@@ -166,7 +166,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,
     if auto_show:
         plt.show()
 
-    return fig
+    if not ax:
+        return fig
 
 
 def display_differences(image,
@@ -314,9 +315,11 @@ def plot_precision_recall(AP, precisions, recalls, IoU=80, ax=None):
     # Plot the Precision-Recall curve
     if not ax:
         _, ax = plt.subplots(1)
-    ax.set_title("Precision-Recall Curve. AP@{} = {:.3f}".format(IoU,AP))
+    ax.set_title("Precision-Recall Curve. AP@{} = {:.3f}".format(IoU, AP))
     ax.set_ylim(0, 1.1)
     ax.set_xlim(0, 1.1)
+    ax.set_ylabel('Precision')
+    ax.set_xlabel('Recall')
     _ = ax.plot(recalls, precisions)
 
 

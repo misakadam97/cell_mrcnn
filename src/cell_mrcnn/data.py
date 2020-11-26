@@ -25,15 +25,15 @@ from cell_mrcnn import utils
 from PIL import Image
 
 
-
+# todo: some of the functions below might be better in utils?
 def get_channel_paths(folder, channel,
-                      columns=('A01', 'A02', 'A03', 'A04', 'B01', 'B02',
+                      wells=('A01', 'A02', 'A03', 'A04', 'B01', 'B02',
                                'B03', 'B04')):
     """
 
     :param folder:
     :param channel: 'w1' or 'w2' or 'w3'
-    :param columns: any comb of ['A01', 'A02', 'A03', 'A04', 'B01', 'B02',
+    :param wells: any comb of ['A01', 'A02', 'A03', 'A04', 'B01', 'B02',
     'B03', 'B04']
     :return:
     """
@@ -45,7 +45,7 @@ def get_channel_paths(folder, channel,
             continue
         if path_.split('_')[-1][:2] != channel:
             continue
-        if path_.split('_')[1] not in columns:
+        if path_.split('_')[1] not in wells:
             continue
         channel_paths.append(path)
     return channel_paths

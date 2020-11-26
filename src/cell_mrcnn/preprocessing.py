@@ -34,18 +34,20 @@ if __name__ == '__main__':
         red, blue = imread(red_path), imread(blue_path)
         comp = preproc_pipeline(red, blue)
 
+        # todo: refractor w/ utils.get_well_and_pos()
+        # todo: also use '_'.join(); and maybe strip the "s" b4 position number
         # red output filename
         red_tail_of_path = split(red_path)[1]
-        red_col_and_pos = red_tail_of_path.split('_')[1:3]
-        red_col_and_pos = ''.join(red_col_and_pos)
+        red_well_and_pos = red_tail_of_path.split('_')[1:3]
+        red_well_and_pos = ''.join(red_well_and_pos)
         # the output filename
         blue_tail_of_path = split(blue_path)[1]
-        blue_col_and_pos = blue_tail_of_path.split('_')[1:3]
-        blue_col_and_pos = ''.join(blue_col_and_pos)
+        blue_well_and_pos = blue_tail_of_path.split('_')[1:3]
+        blue_well_and_pos = ''.join(blue_well_and_pos)
 
-        assert blue_col_and_pos == red_col_and_pos, "col-pos mismatch"
+        assert blue_well_and_pos == red_well_and_pos, "well-pos mismatch"
 
-        fname = blue_col_and_pos
+        fname = blue_well_and_pos
         Image.fromarray(comp).save(join(composite_folder, fname + '.png'))
 
 
