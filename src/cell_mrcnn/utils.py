@@ -1045,7 +1045,7 @@ def preproc_pipeline(red, blue):
     return create_composite(red8, blue8)
 
 
-def calc_layers(image, mask):
+def calc_layers(image, mask, nlayers = 100):
     if image.ndim == 3:
         image = image[:, :, 0]
     all_cells = []
@@ -1064,7 +1064,7 @@ def calc_layers(image, mask):
         #     mask_diff = mask_bigger - mask_big
         #     cell.append((mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
         #     mask_big = mask_bigger.copy()
-        for i in range(50):
+        for i in range(nlayers):
             if mask_smaller.sum() > 0:
                 mask_smaller = binary_erosion(mask_small).astype(int)
                 mask_diff = mask_small - mask_smaller
