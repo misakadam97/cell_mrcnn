@@ -20,6 +20,7 @@ __pycache__/*
 .settings
 .idea
 tags
+data/*
 
 # Package files
 *.egg
