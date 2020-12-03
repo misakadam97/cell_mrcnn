@@ -137,7 +137,8 @@ if mask_image_channels and layers_image_channels:
         with tf.device(DEVICE):
             model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR,
                                       config=config)
-        weights_path = join("/home/mrcnn/logs/mask_rcnn_cell_0024.h5")
+        weights_path = join(
+            "/home/mrcnn/logs/cell20201123T1456/mask_rcnn_cell_0017.h5")
         st.write("Loading weights ", weights_path)
         model.load_weights(weights_path, by_name=True)
 

@@ -82,7 +82,7 @@ class CellConfig(Config):
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 200
-
+    # todo: 0.98 might be too high
     DETECTION_MIN_CONFIDENCE = 0.98
 
     # Length of square anchor side in pixels
