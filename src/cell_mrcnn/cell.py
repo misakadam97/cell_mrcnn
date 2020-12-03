@@ -29,34 +29,22 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 
 import os
 from os.path import join
-import sys
-import json
-import datetime
 import numpy as np
-import skimage.draw
-from cell_mrcnn import __file__ as src_path
-import matplotlib.pyplot as plt  # skimage.io.imread gives runtimeWarinig
-import yaml
+from cell_mrcnn.utils import get_weights_path_from_config_file, \
+    get_data_path_from_config_file
 from matplotlib import pyplot as plt
-from scipy.sparse import bsr_matrix
 from imgaug import augmenters as iaa
 import tensorflow as tf
-import keras
-
-# Root directory of the project
-ROOT_DIR = src_path.split('src')[0]
 
 # Import Mask RCNN
-sys.path.append(ROOT_DIR)  # To find local version of the library
 from cell_mrcnn.config import Config
 from cell_mrcnn import model as modellib, utils
 
-# Path to trained weights file
-COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+DEFAULT_LOGS_DIR = join(get_weights_path_from_config_file(), "logs")
+dataset_dir = join(get_data_path_from_config_file(), 'annotated_datasets')
 
 ############################################################
 #  Configurations
@@ -151,9 +139,10 @@ class CellInferenceConfig(CellConfig):
 
 class CellDataset(utils.Dataset):
 
-    def load_cell(self, dataset_dir, subset):
+    def load_cell(self, path_to_dataset, subset):
         """Load the cell images.
-        dataset_dir: Root directory of the dataset.
+        path_to_dataset: Path to the dataset that contaions the annotated
+        images.
         subset: Subset to load: train or val
         """
         # Add classes. We have only one class to add.
@@ -161,10 +150,10 @@ class CellDataset(utils.Dataset):
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
-        dataset_dir = os.path.join(dataset_dir, subset)
+        path_to_dataset = os.path.join(path_to_dataset, subset)
 
-        subfolders = [os.path.join(dataset_dir, subfolder) for subfolder in
-                      os.listdir(dataset_dir)]
+        subfolders = [os.path.join(path_to_dataset, subfolder) for subfolder in
+                      os.listdir(path_to_dataset)]
 
         for subfolder in subfolders:
             image_names = [file_name for file_name in os.listdir(subfolder) if
@@ -190,7 +179,6 @@ class CellDataset(utils.Dataset):
         if image_info["source"] != "cell":
             return super(self.__class__, self).load_mask(image_id)
 
-        info = self.image_info[image_id]
         im_path = self.image_info[image_id]['path']
         subfolder = '/'.join(im_path.split('/')[:-1]) + '/'
         mask_names = [file_name for file_name in os.listdir(subfolder)
@@ -223,15 +211,15 @@ class CellDataset(utils.Dataset):
 
 def train(model):
     """Train the model."""
-    dataset_dir =  join(ROOT_DIR, 'data/annotated_datasets/2020_11_22_02_55_03/')
+    dataset_path = join(dataset_dir, '2020_11_22_02_55_03/')
     # Training dataset.
     dataset_train = CellDataset()
-    dataset_train.load_cell(dataset_dir, "train")
+    dataset_train.load_cell(dataset_path, "train")
     dataset_train.prepare()
 
     # Validation dataset
     dataset_val = CellDataset()
-    dataset_val.load_cell(dataset_dir, "val")
+    dataset_val.load_cell(dataset_path, "val")
     dataset_val.prepare()
 
     # Image augmentation
@@ -246,17 +234,6 @@ def train(model):
         iaa.Add((-10, 10)),
         iaa.Multiply((0.8, 1.5))
     ])
-
-    # *** This training schedule is an example. Update to your needs ***
-    # Since we're using a very small dataset, and starting from
-    # COCO trained weights, we don't need to train too long. Also,
-    # no need to train all layers, just the heads should do it.
-    # print("Training network heads")
-    # model.train(dataset_train, dataset_val,
-    #             learning_rate=config.LEARNING_RATE,
-    #             epochs=5,
-    #             augmentation=augmentation,
-    #             layers='heads')
 
     print("Train all layers")
     model.train(dataset_train, dataset_val,
@@ -277,11 +254,6 @@ if __name__ == '__main__':
         model = modellib.MaskRCNN(mode="training", config=config,
                                   model_dir=DEFAULT_LOGS_DIR)
 
-    # weights_path = COCO_WEIGHTS_PATH
-    # model.load_weights('/home/miska/repos/cell_mrcnn/logs/cell20201016T0008
-    # /mask_rcnn_cell_0010.h5')#, by_name=True, exclude=[
-    #     "mrcnn_class_logits", "mrcnn_bbox_fc",
-    #     "mrcnn_bbox", "mrcnn_mask", "conv1"])
     train(model)
 
 

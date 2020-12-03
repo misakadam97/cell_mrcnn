@@ -9,7 +9,7 @@ Written by Waleed Abdulla
 
 import sys
 import os
-from os.path import split
+from os.path import split, join, expanduser
 import logging
 import math
 import random
@@ -25,15 +25,92 @@ import urllib.request
 import shutil
 import warnings
 from distutils.version import LooseVersion
-from cell_mrcnn import __file__ as path
 from PIL import Image
 from copy import deepcopy
-from matplotlib import pyplot as plt
+import configparser
+import warnings
 
 # URL from which to download the latest COCO trained weights
 COCO_MODEL_URL = "https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5"
 
 
+def get_config_path():
+    return join(expanduser('~'))
+
+
+def get_config_filename():
+    if sys.platform.startswith('win'):
+        cfg_file = 'cell_mrcnn.conf'
+    else:
+        cfg_file = '.cell_mrcnnrc'
+    return cfg_file
+
+
+def get_config_file():
+    return join(get_config_path(), get_config_filename())
+
+
+def create_template_config_file(cfg_file):
+    warnings.warn("Could not find cell_mrcnn config file. A template "
+                  "config file will be written to {}".format(cfg_file))
+
+    parser.add_section('data')
+    parser.set('data', 'data_path', '')
+    parser.add_section('weights')
+    parser.set('weights', 'weights_path', '')
+    parser.add_section('results')
+    parser.set('results', 'results_path', '')
+    with open(cfg_file, 'w') as f:
+        parser.write(f)
+
+def get_data_path_from_config_file():
+    cfg_file = get_config_file()
+
+    parser = configparser.SafeConfigParser()
+    if os.path.exists(cfg_file):
+        parser.read(cfg_file)
+        try:
+            return parser.get(section='data', option='data_path')
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            warnings.warn("Could not find data section or data_path option in "
+                          "data section in config file at: {}."
+                          "Correct the file, or delete it and rerun to "
+                          "create a template.".format(cfg_file))
+    else:
+        create_template_config_file(cfg_file)
+
+
+def get_weights_path_from_config_file():
+    cfg_file = get_config_file()
+
+    parser = configparser.SafeConfigParser()
+    if os.path.exists(cfg_file):
+        parser.read(cfg_file)
+        try:
+            return parser.get(section='weights', option='weights_path')
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            warnings.warn("Could not find weights section or weights_path "
+                          "option in weights section in config file at: {}."
+                          "Correct the file, or delete it and rerun to "
+                          "create a template.".format(cfg_file))
+    else:
+        create_template_config_file(cfg_file)
+
+def get_results_path_from_config_file():
+    cfg_file = get_config_file()
+
+    parser = configparser.SafeConfigParser()
+    if os.path.exists(cfg_file):
+        parser.read(cfg_file)
+        try:
+            return parser.get(section='results', option='results_path')
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            warnings.warn("Could not find results section or results_path "
+                          "option in results section in config file at: {}."
+                          "Correct the file, or delete it and rerun to "
+                          "create a template.".format(cfg_file))
+    else:
+        create_template_config_file(cfg_file)
 ############################################################
 #  Bounding Boxes
 ############################################################
@@ -924,18 +1001,6 @@ def resize(image, output_shape, order=1, mode='constant', cval=0, clip=True,
             image, output_shape,
             order=order, mode=mode, cval=cval, clip=clip,
             preserve_range=preserve_range)
-
-
-def test_get_concentric_intensities():
-    zeros = np.zeros((128, 128))
-
-    for i in range(int(zeros.shape[0] / 2)):
-        plt.pause(0.01)
-        plt.imshow(zeros)
-        zeros[i, i:zeros.shape[0] - i] = 1
-        zeros[zeros.shape[0] - i - 1, i:zeros.shape[0] - i] = 1
-        zeros[i + 1:zeros.shape[0] - i - 1, i] = 1
-        zeros[i + 1:zeros.shape[0] - i - 1, zeros.shape[0] - i - 1] = 1
 
 
 def get_concentric_intensities(array):

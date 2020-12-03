@@ -20,12 +20,12 @@ import pandas as pd
 import skimage.io
 import cell_mrcnn.model as modellib
 import time
-from cell_mrcnn import __file__ as path
 from os import mkdir
 from os.path import join, isdir
 from cell_mrcnn import cell
 from cell_mrcnn import visualize
-from cell_mrcnn.utils import calc_layers, convert_to_bit8
+from cell_mrcnn.utils import calc_layers, convert_to_bit8, \
+    get_data_path_from_config_file, get_results_path_from_config_file
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import base64
@@ -33,10 +33,8 @@ import time
 from PIL import Image
 import glob
 
-
-ROOT_DIR = path.split('src')[0]
-MODEL_DIR = join(ROOT_DIR, "logs")
-data_dir = join(ROOT_DIR, 'data')
+MODEL_DIR = join(get_data_path_from_config_file(), "logs")
+data_dir = get_data_path_from_config_file()
 
 
 if tf.test.gpu_device_name():
@@ -185,7 +183,7 @@ if mask_image_channels and layers_image_channels:
             st.pyplot(fig)
 
         # save the results
-        results_dir = join(ROOT_DIR, 'results')
+        results_dir = get_results_path_from_config_file()
         if not isdir(results_dir):
             mkdir(results_dir)
         for group in result_dict.keys():

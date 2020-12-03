@@ -5,21 +5,20 @@ import sys
 import numpy as np
 import skimage.draw
 from skimage.io import imread
-from cell_mrcnn import __file__ as src_path
 from cell_mrcnn.utils import get_concentric_intensities, \
-    correct_central_brightness, subtract_bg, convert_to_bit8
+    correct_central_brightness, subtract_bg, convert_to_bit8, \
+    get_data_path_from_config_file
 import read_roi
 import gc
 import pandas as pd
 from datetime import datetime
 from shutil import copyfile
 
-# Root directory of the project
-ROOT_DIR = src_path.split('src')[0]
-dataset_dir = ROOT_DIR + 'data/annotated_datasets/'
+# data directory
+data_dir = get_data_path_from_config_file()
+dataset_dir = join(data_dir, 'annotated_datasets/')
 
 # Import Mask RCNN
-sys.path.append(ROOT_DIR)  # To find local version of the library
 from cell_mrcnn.config import Config
 from cell_mrcnn import utils
 from PIL import Image
@@ -314,9 +313,7 @@ class CellTransformData(utils.Dataset):
 
 if __name__ == '__main__':
     # load the dataset
-    datasets_path = join(src_path.split('src')[0], 'data',
-                         'annotated_datasets')
-    dataset_path = join(datasets_path, '2020_11_22_02_55_03')
+    dataset_path = join(dataset_dir, '2020_11_22_02_55_03')
     ds = CellTransformData()
     ds.load_cell(dataset_path)
     ds.prepare()

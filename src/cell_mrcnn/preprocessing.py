@@ -1,4 +1,4 @@
-from cell_mrcnn.utils import preproc_pipeline
+from cell_mrcnn.utils import preproc_pipeline, get_data_path_from_config_file
 from cell_mrcnn.data import get_channel_paths
 from skimage.io import imread
 from PIL import Image
@@ -9,18 +9,16 @@ import glob
 import argparse
 from pathlib import Path
 
-def preprocess(filters, output_folder, mask_pattern = 'w3', sample_pattern = 'w2'):
+
+def preprocess(filters, output_folder, mask_pattern='w3', sample_pattern='w2'):
     """filters: list of strings in the experiment folder which toghether are unique to the experiment
     output_folder: name of the folder where the processed images will be stored"""
 
-    src_path = dirname(realpath(__file__))
-    ROOT_DIR = join(src_path.split('cell_mrcnn')[0], 'cell_mrcnn')
+    data_dir = get_data_path_from_config_file()
 
-    data_dir = join(ROOT_DIR, 'data')
+    # folders = glob.glob(data_dir + '/*/')
 
-    #folders = glob.glob(data_dir + '/*/')
-
-    subfolders = glob.glob(data_dir + '**/**/', recursive = True)
+    subfolders = glob.glob(data_dir + '**/**/', recursive=True)
 
     for filt in filters:
         subfolders = [x for x in subfolders if filt in x]
@@ -29,32 +27,34 @@ def preprocess(filters, output_folder, mask_pattern = 'w3', sample_pattern = 'w2
 
     print(f'Selected folder for analysis: {active_folder}')
 
-    w2_paths = get_channel_paths(active_folder, sample_pattern, ('A01', 'A02', 'A03', 'B01', 'B02', 'B03'))
+    w2_paths = get_channel_paths(active_folder, sample_pattern,
+                                 ('A01', 'A02', 'A03', 'B01', 'B02', 'B03'))
 
     w2_paths.sort()
 
-    w3_paths = get_channel_paths(active_folder, mask_pattern, ('A01', 'A02', 'A03', 'B01', 'B02', 'B03'))
+    w3_paths = get_channel_paths(active_folder, mask_pattern,
+                                 ('A01', 'A02', 'A03', 'B01', 'B02', 'B03'))
 
     w3_paths.sort()
 
     output_folder = join(data_dir, output_folder)
 
     if not isdir(output_folder):
-         mkdir(output_folder)
+        mkdir(output_folder)
 
-    #save the active folder path
+    # save the active folder path
     with open(join(output_folder, 'experiment_path.path'), 'w') as f:
         f.write(active_folder)
 
     composite_folder = join(output_folder, 'composite')
 
     if not isdir(composite_folder):
-         mkdir(composite_folder)
-
+        mkdir(composite_folder)
 
     for i, (red_path, blue_path) in enumerate(zip(w2_paths, w3_paths)):
-        print('\rCreating composite images: {}/{}'.format(i+1,len(w2_paths)),
-              end='...')
+        print(
+            '\rCreating composite images: {}/{}'.format(i + 1, len(w2_paths)),
+            end='...')
         try:
             red, blue = imread(red_path), imread(blue_path)
             comp = preproc_pipeline(red, blue)
@@ -78,15 +78,24 @@ def preprocess(filters, output_folder, mask_pattern = 'w3', sample_pattern = 'w2
         except:
             print(f'image {i} processing failed')
 
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f","--filters", nargs='+', help="give filters to select the right folder and subfolder (e.g Timepoint 1.)", required=True)
-    parser.add_argument("-o","--output_folder",  help="give filters to select the right folder and subfolder (e.g Timepoint 1.)", required=True)
-    parser.add_argument("-m","--mask_pattern",  help="pattern which defines the mask channel e.g. w3", required=False)
-    parser.add_argument("-s","--sample_pattern",  help="pattern which defines the sample channel e.g. w2", required=False)
+    parser.add_argument("-f", "--filters", nargs='+',
+                        help="give filters to select the right folder and subfolder (e.g Timepoint 1.)",
+                        required=True)
+    parser.add_argument("-o", "--output_folder",
+                        help="give filters to select the right folder and subfolder (e.g Timepoint 1.)",
+                        required=True)
+    parser.add_argument("-m", "--mask_pattern",
+                        help="pattern which defines the mask channel e.g. w3",
+                        required=False)
+    parser.add_argument("-s", "--sample_pattern",
+                        help="pattern which defines the sample channel e.g. w2",
+                        required=False)
     args = parser.parse_args()
-    
+
     if not args.mask_pattern:
         mask_pattern = 'w3'
     else:
@@ -101,4 +110,3 @@ if __name__ == '__main__':
     output_folder = args.output_folder
 
     preprocess(filters, output_folder, mask_pattern, sample_pattern)
-

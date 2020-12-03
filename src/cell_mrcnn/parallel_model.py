@@ -17,7 +17,7 @@ import tensorflow as tf
 import keras.backend as K
 import keras.layers as KL
 import keras.models as KM
-
+from cell_mrcnn.utils import get_weights_path_from_config_file
 
 class ParallelModel(KM.Model):
     """Subclasses the standard Keras Model and adds multi-GPU support.
@@ -119,11 +119,8 @@ if __name__ == "__main__":
 
     GPU_COUNT = 2
 
-    # Root directory of the project
-    ROOT_DIR = os.path.abspath("../")
-
     # Directory to save logs and trained model
-    MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+    MODEL_DIR = os.path.join(get_weights_path_from_config_file(), "logs")
 
     def build_model(x_train, num_classes):
         # Reset default graph. Keras leaves old ops in the graph,
