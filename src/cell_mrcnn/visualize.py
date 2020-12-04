@@ -503,16 +503,19 @@ def display_weight_stats(model):
     display_table(table)
 
 
-def plot_comparison(im1, im2, names=('image1', 'image2')):
+def plot_comparison(images, names=None):
 
-    fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8, 4), sharex=True,
+    fig, ax = plt.subplots(ncols=len(images),
+                                   figsize=(8*len(images), 4),
+                                   sharex=True,
                                    sharey=True)
-    ax1.imshow(im1, cmap=plt.cm.gray)
-    ax1.set_title(names[0])
-    ax1.axis('off')
-    ax2.imshow(im2, cmap=plt.cm.gray)
-    ax2.set_title(names[1])
-    ax2.axis('off')
+    for i, image in enumerate(images):
+        ax[i].imshow(image, cmap=plt.cm.gray)
+        if names:
+            ax[i].set_title(names[i])
+        else:
+            ax[i].set_title('image_'+str(i+1))
+        ax[i].axis('off')
     plt.tight_layout()
 
 

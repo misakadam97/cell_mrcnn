@@ -63,6 +63,7 @@ def create_template_config_file(cfg_file):
     with open(cfg_file, 'w') as f:
         parser.write(f)
 
+
 def get_data_path_from_config_file():
     cfg_file = get_config_file()
 
@@ -96,6 +97,7 @@ def get_weights_path_from_config_file():
     else:
         create_template_config_file(cfg_file)
 
+
 def get_results_path_from_config_file():
     cfg_file = get_config_file()
 
@@ -111,6 +113,8 @@ def get_results_path_from_config_file():
                           "create a template.".format(cfg_file))
     else:
         create_template_config_file(cfg_file)
+
+
 ############################################################
 #  Bounding Boxes
 ############################################################
@@ -443,8 +447,8 @@ class Dataset(object):
         """
         # Load image
         image = skimage.io.imread(self.image_info[image_id]['path'])
-        #images are stored in RGB format, but the G channel is empty
-        image = image[:,:,[0,2]]
+        # images are stored in RGB format, but the G channel is empty
+        image = image[:, :, [0, 2]]
 
         if image.ndim < 3:
             image = image[..., np.newaxis]
@@ -1110,7 +1114,7 @@ def preproc_pipeline(red, blue):
     return create_composite(red8, blue8)
 
 
-def calc_layers(image, mask, nlayers = 100):
+def calc_layers(image, mask, nlayers=100):
     if image.ndim == 3:
         image = image[:, :, 0]
     all_cells = []
@@ -1119,23 +1123,45 @@ def calc_layers(image, mask, nlayers = 100):
         cell = []
         mask_ = mask[:, :, idx]
         bbox_ = bbox[idx]
-        mini_mask = mask_[bbox_[0]:bbox_[2], bbox_[1]:bbox_[3]]
-        mini_image = image[bbox_[0]:bbox_[2], bbox_[1]:bbox_[3]]
-        mask_big = deepcopy(mini_mask).astype(int)
+        # only work w/ a part of the images
+        # binary erosion doesn't work well if the mask touches the bbox edges
+        # todo: if only half of the cell is in the images the flat part of
+        #  the cell that's adjacent to the image edge doesn't get eroded
+        if bbox_[0] > 0:
+            y1 = bbox_[0] - 1
+        else:
+            y1 = bbox_[0]
+        if bbox_[1] > 0:
+            x1 = bbox_[1] - 1
+        else:
+            x1 = bbox_[1]
+        if bbox_[2] < image.shape[0]:
+            y2 = bbox_[2] + 1
+        else:
+            y2 = bbox_[2]
+        if bbox_[2] < image.shape[1]:
+            x2 = bbox_[3] + 1
+        else:
+            x2 = bbox_[3]
+        mini_mask = mask_[y1:y2, x1:x2]
+        mini_image = image[y1:y2, x1:x2]
+        mini_image *= mini_mask
+        mini_image = mini_image / mini_image.mean()
         mask_small = deepcopy(mini_mask).astype(int)
         mask_smaller = deepcopy(mini_mask).astype(int)
-        # for i in range(10):
-        #     mask_bigger = binary_dilation(mask_big).astype(int)
-        #     mask_diff = mask_bigger - mask_big
-        #     cell.append((mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
-        #     mask_big = mask_bigger.copy()
         for i in range(nlayers):
             if mask_smaller.sum() > 0:
                 mask_smaller = binary_erosion(mask_small).astype(int)
                 mask_diff = mask_small - mask_smaller
-                cell.append((
-                                    mask_diff * mini_image).sum() / mask_diff.sum())  # average fluorescence of the mask diff
+                # average fluorescence of the mask diff
+                cell.append((mask_diff * mini_image).sum() / mask_diff.sum())
                 mask_small = deepcopy(mask_smaller)
+                # for testing
+                # plot_comparison([mask_small, mask_smaller, mask_diff,
+                #                  mask_diff * mini_image],
+                #                 names=['mask_small', 'mask_smaller',
+                #                        'mask_diff', 'mask_diff * mini_image'])
+                # plt.pause(1)
         all_cells.append(cell)
 
     return all_cells
