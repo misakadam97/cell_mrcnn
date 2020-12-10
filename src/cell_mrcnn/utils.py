@@ -53,7 +53,8 @@ def get_config_file():
 def create_template_config_file(cfg_file):
     warnings.warn("Could not find cell_mrcnn config file. A template "
                   "config file will be written to {}".format(cfg_file))
-
+    
+    parser = configparser.SafeConfigParser()
     parser.add_section('data')
     parser.set('data', 'data_path', '')
     parser.add_section('weights')
