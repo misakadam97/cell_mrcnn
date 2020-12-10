@@ -21,6 +21,7 @@ __pycache__/*
 .idea
 tags
 data/*
+results/*
 
 # Package files
 *.egg
