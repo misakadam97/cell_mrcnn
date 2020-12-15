@@ -31,7 +31,7 @@ import os
 from os.path import join
 import numpy as np
 from cell_mrcnn.utils import get_weights_path_from_config_file, \
-    get_data_path_from_config_file
+    get_cell_mrcnn_path_from_config_file
 from matplotlib import pyplot as plt
 from imgaug import augmenters as iaa
 import tensorflow as tf
@@ -44,7 +44,7 @@ from cell_mrcnn import model as modellib, utils
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = join(get_weights_path_from_config_file(), "logs")
-dataset_dir = join(get_data_path_from_config_file(), 'annotated_datasets')
+dataset_dir = join(get_cell_mrcnn_path_from_config_file(), 'annotated_datasets')
 
 ############################################################
 #  Configurations

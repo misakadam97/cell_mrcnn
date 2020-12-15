@@ -1,13 +1,12 @@
-from os import listdir, walk, mkdir, path
-from os.path import isfile, join, isdir, split, basename
+from os import listdir, mkdir, path
+from os.path import join, isdir, basename, split
 from glob import glob
-import sys
 import numpy as np
 import skimage.draw
 from skimage.io import imread
-from cell_mrcnn.utils import get_concentric_intensities, \
-    correct_central_brightness, subtract_bg, convert_to_bit8, \
-    get_data_path_from_config_file
+from cell_mrcnn.utils import correct_central_brightness, subtract_bg, convert_to_bit8, \
+    get_cell_mrcnn_path_from_config_file, get_image_description, \
+    preproc_pipeline, load_image
 import read_roi
 import gc
 import pandas as pd
@@ -15,40 +14,12 @@ from datetime import datetime
 from shutil import copyfile
 
 # data directory
-data_dir = get_data_path_from_config_file()
+data_dir = get_cell_mrcnn_path_from_config_file()
 dataset_dir = join(data_dir, 'annotated_datasets/')
 
 # Import Mask RCNN
-from cell_mrcnn.config import Config
 from cell_mrcnn import utils
 from PIL import Image
-
-
-# todo: some of the functions below might be better in utils?
-def get_channel_paths(folder, channel,
-                      wells=('A01', 'A02', 'A03', 'A04', 'B01', 'B02',
-                               'B03', 'B04')):
-    """
-
-    :param folder:
-    :param channel: 'w1' or 'w2' or 'w3'
-    :param wells: any comb of ['A01', 'A02', 'A03', 'A04', 'B01', 'B02',
-    'B03', 'B04']
-    :return:
-    """
-    paths = glob(join(folder, '**/*.tif'), recursive=True)
-    channel_paths = []
-    for path in paths:
-        path_ = split(path)[1]
-        if 'thumb' in path_:
-            continue
-        if path_.split('_')[-1][:2] != channel:
-            continue
-        if path_.split('_')[1] not in wells:
-            continue
-        channel_paths.append(path)
-    return channel_paths
-
 
 def calculate_percentiles(im_paths):
     # takes ~2mins
@@ -81,6 +52,53 @@ def calculate_percentiles(im_paths):
 
     return perc_df
 
+
+def preprocess(channel_paths, output_folder, cutoffs):
+    """
+
+    :param input_folder: folder of the raw images
+    :param output_folder: preprocessed images will be saved here
+    :param channel_paths: nested list of image paths. Can contain 1 or 2
+    lists. If it contains 2; 1st should be Venus, this is gona be the red
+    channel; 2nd should be Cerulean, this will be the blue channel;
+    and they should be sorted!
+    :param cutoffs: cutoff for 8 bit conversion (order same as in channel
+    paths)
+    :return:
+    """
+
+    if not isdir(output_folder):
+        mkdir(output_folder)
+
+    # If only Venus channel
+    if len(channel_paths) == 1:
+        venus_paths = channel_paths[0]
+        for i, impath in enumerate(venus_paths):
+            im = imread(impath)
+            im_c = correct_central_brightness(im.astype(np.float16))
+            im_bg = subtract_bg(im_c)
+            im8 = convert_to_bit8(im_bg, cutoffs[0])
+            fname = impath.split()[1]
+            Image.fromarray(im8).save(join(output_folder, fname + '.png'))
+
+    # If Venus and Cerulean
+    elif len(channel_paths) == 2:
+        red_paths, blue_paths = channel_paths[0], channel_paths[1]
+        red_desc = [get_image_description(path)[1:] for path in red_paths]
+        blue_desc = [get_image_description(path)[1:] for path in blue_paths]
+        assert red_desc == blue_desc, 'images not sorted'
+        for i, (red_path, blue_path) in enumerate(zip(red_paths, blue_paths)):
+            print('\rCreating composite images: {}/{}' \
+                  .format(i + 1, len(blue_paths)), end='...')
+            try:
+                red, blue = imread(red_path), imread(blue_path)
+                comp = preproc_pipeline(red, blue)
+
+                fname = split(red_path)[1].split('.')[0]
+                Image.fromarray(comp).save(join(output_folder, fname + '.png'))
+
+            except:
+                print(f'image {i} processing failed')
 
 def transfer_w3_channel_images(data_dir):
     cit_dir = join(data_dir, 'w3/cit')
@@ -129,9 +147,9 @@ def cell_groups_to_bg(image, roi_set):
 def read_roi_or_roiset(impath):
     impath = impath.split('.')[0]
     # if rois are in a zip (image contains multiple rois)
-    if path.isfile(join(impath + '_roi.zip')):
+    if path.isfile(join(impath + '.zip')):
         rois = read_roi.read_roi_zip(
-            join(impath + '_roi.zip'))
+            join(impath + '.zip'))
     # if roi is in roi format(image only contains 1 roi)
     elif path.isfile(join(impath + '.roi')):
         rois = read_roi.read_roi_file(join(impath + '.roi'))
@@ -141,24 +159,26 @@ def read_roi_or_roiset(impath):
     return rois
 
 
-def calc_avg_pixel_value(image_paths, output_file = None):
-    channel1, channel2, channel3 = [], [], []
+def calc_avg_pixel_value(image_paths, output_file=None):
+    image = load_image(image_paths[0])
+    channel_n = image.shape[2]
+    channel_mean_dict = {}
+    for i in range(channel_n):
+        channel_mean_dict[i] = []
     for image_path in image_paths:
-        image = imread(image_path)
-        channel1.append(image[:, :, 0].mean())
-        channel2.append(image[:, :, 1].mean())
-        channel3.append(image[:, :, 2].mean())
-
-    channel1 = np.array(channel1).mean().reshape(1)
-    channel2 = np.array(channel2).mean().reshape(1)
-    channel3 = np.array(channel3).mean().reshape(1)
+        image = load_image(image_path)
+        for i in range(channel_n):
+            channel_mean_dict[i].append(image[:, :, i].mean())
+    for i in range(channel_n):
+        channel_mean_dict[i] = np.array(channel_mean_dict[i]).mean()
+    means = [mean for mean in channel_mean_dict.values()]
 
     if output_file:
         with open(output_file, 'w') as f:
-            f.write('Channel 1 mean: {}\nChannel 2  mean: {}\nChannel 3 '
-                    'mean: {}'.format(channel1, channel2, channel3))
+            for i, mean in enumerate(means):
+                f.write('Channel {} mean: {}'.format(i+1, means[i]))
 
-    return np.concatenate((channel1, channel2, channel3))
+    return means
 
 
 def copy_annotated(input_folder, output_folder):
@@ -171,12 +191,13 @@ def copy_annotated(input_folder, output_folder):
     """
 
     # get a list of roi paths
-    roi_paths = glob(join(input_folder, '*_roi.zip'))
+    roi_paths = glob(join(input_folder, '*.zip'))
+    roi_paths.extend(glob(join(input_folder, '*.roi')))
 
     # get the corresponding image paths
     image_paths = []
     for roi_path in roi_paths:
-        image_paths.append(roi_path.split('_roi.zip')[0] + '.png')
+        image_paths.append(roi_path.split('.')[0] + '.png')
 
     date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     output_folder = join(output_folder, date)
@@ -187,8 +208,7 @@ def copy_annotated(input_folder, output_folder):
         copyfile(roi, join(output_folder, basename(roi)))
         copyfile(im, join(output_folder, basename(im)))
 
-
-
+    return output_folder
 
 
 class CellTransformData(utils.Dataset):
@@ -306,9 +326,9 @@ class CellTransformData(utils.Dataset):
                                 + '.png'))
 
             copyfile(info['path'], join(output_dir, str(id_) + '.png'))
-        print('Average pixel value is: {}'.format(np.array(means).mean(
-            axis=0)))
-        return np.array(means)
+        means = np.array(means).mean(axis=0)
+        print('Average pixel value(s) is(/are): {}'.format(means))
+        return means
 
 
 if __name__ == '__main__':

@@ -9,6 +9,7 @@ Written by Waleed Abdulla
 
 import sys
 import os
+from glob import glob
 from os.path import split, join, expanduser
 import logging
 import math
@@ -53,63 +54,26 @@ def get_config_file():
 def create_template_config_file(cfg_file):
     warnings.warn("Could not find cell_mrcnn config file. A template "
                   "config file will be written to {}".format(cfg_file))
-    
+
     parser = configparser.SafeConfigParser()
-    parser.add_section('data')
-    parser.set('data', 'data_path', '')
-    parser.add_section('weights')
-    parser.set('weights', 'weights_path', '')
-    parser.add_section('results')
-    parser.set('results', 'results_path', '')
+    parser.add_section('cell_mrcnn')
+    parser.set('cell_mrcnn', 'cell_mrcnn_path', '')
     with open(cfg_file, 'w') as f:
         parser.write(f)
 
 
-def get_data_path_from_config_file():
+def get_cell_mrcnn_path_from_config_file():
     cfg_file = get_config_file()
 
     parser = configparser.SafeConfigParser()
     if os.path.exists(cfg_file):
         parser.read(cfg_file)
         try:
-            return parser.get(section='data', option='data_path')
+            return parser.get(section='cell_mrcnn', option='cell_mrcnn_path')
         except (configparser.NoSectionError, configparser.NoOptionError):
-            warnings.warn("Could not find data section or data_path option in "
+            warnings.warn("Could not find cell_mrcnn section or "
+                          "cell_mrcnn_path option in "
                           "data section in config file at: {}."
-                          "Correct the file, or delete it and rerun to "
-                          "create a template.".format(cfg_file))
-    else:
-        create_template_config_file(cfg_file)
-
-
-def get_weights_path_from_config_file():
-    cfg_file = get_config_file()
-
-    parser = configparser.SafeConfigParser()
-    if os.path.exists(cfg_file):
-        parser.read(cfg_file)
-        try:
-            return parser.get(section='weights', option='weights_path')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            warnings.warn("Could not find weights section or weights_path "
-                          "option in weights section in config file at: {}."
-                          "Correct the file, or delete it and rerun to "
-                          "create a template.".format(cfg_file))
-    else:
-        create_template_config_file(cfg_file)
-
-
-def get_results_path_from_config_file():
-    cfg_file = get_config_file()
-
-    parser = configparser.SafeConfigParser()
-    if os.path.exists(cfg_file):
-        parser.read(cfg_file)
-        try:
-            return parser.get(section='results', option='results_path')
-        except (configparser.NoSectionError, configparser.NoOptionError):
-            warnings.warn("Could not find results section or results_path "
-                          "option in results section in config file at: {}."
                           "Correct the file, or delete it and rerun to "
                           "create a template.".format(cfg_file))
     else:
@@ -448,11 +412,14 @@ class Dataset(object):
         """
         # Load image
         image = skimage.io.imread(self.image_info[image_id]['path'])
-        # images are stored in RGB format, but the G channel is empty
-        image = image[:, :, [0, 2]]
-
         if image.ndim < 3:
             image = image[..., np.newaxis]
+
+        if image.shape[2] == 3:
+            if (image[:, :, 1] == 0).all():
+                # images are stored in RGB format, but the G channel is empty
+                image = image[:, :, [0, 2]]
+
         # If has an alpha channel, remove it for consistency
         if image.shape[-1] == 4:
             image = image[..., :3]
@@ -1043,7 +1010,7 @@ def correct_central_brightness(array):
     return corrected
 
 
-def subtract_bg(array):
+def subtract_bg(array, do_opening=True, disk_r=3):
     """
 
     :param array: should be float
@@ -1060,8 +1027,9 @@ def subtract_bg(array):
 
     ar = ar - bg_lvl
     ar[ar < 0] = 0
-    # removes the few bright pixels that are left
-    ar = opening(ar.astype(np.uint16), disk(3))
+    if do_opening:
+        # removes the few bright pixels that are left
+        ar = opening(ar.astype(np.uint16), disk(disk_r))
 
     if (ar == 0).all():
         print("all array values have been turned to zeros during background "
@@ -1100,7 +1068,7 @@ def create_composite(im1, im2):
     return comp
 
 
-def preproc_pipeline(red, blue):
+def preproc_pipeline(red, blue, cutoffs=(2000, 500)):
     red_c = correct_central_brightness(red.astype(np.float16))
     red_bg = subtract_bg(red_c)
 
@@ -1109,8 +1077,8 @@ def preproc_pipeline(red, blue):
     # closes the 20 pixel wide gaps
     # blue_closed = closing(blue_bg, disk(10))
 
-    red8 = convert_to_bit8(red_bg, 3000)
-    blue8 = convert_to_bit8(blue_bg, 500)
+    red8 = convert_to_bit8(red_bg, cutoffs[0])
+    blue8 = convert_to_bit8(blue_bg, cutoffs[1])
 
     return create_composite(red8, blue8)
 
@@ -1229,14 +1197,64 @@ def calc_map_for_multiple_images(dataset):
     return map_dict, precisions, recalls
 
 
-def get_well_and_pos(path):
+def get_image_description(path):
     """
 
-    :param path:
-    :return: list of the well and the position number.
-    eg.: '...A01s10...' -> ['A01', '10']
+    :param path: path of the image
+    :return: list of the channel, genotype, stimulation, position of the image
+    eg.: '...Venus/L_nst_m00.tif' -> ['Venus', 'L', 'nst', '00']
     """
-    tail_of_path = split(path)[1]
-    well_and_pos = tail_of_path.split('_')[1:3]
-    well_and_pos[1] = well_and_pos[1].replace('s', '')
-    return well_and_pos
+    # the channel
+    head = split(path)[0]
+    desc = [head.split('/')[-1]]
+    # the rest
+    tail = split(path)[1].split('.')[0]
+    genotype_stim_pos = tail.split('_')
+    genotype_stim_pos[2] = genotype_stim_pos[2].replace('m', '')
+
+    desc.extend(genotype_stim_pos)
+    return desc
+
+
+def get_image_paths(folder, channels=('Cerulean', 'Venus'),
+                    genotypes=('wt', 'Q', 'L'),
+                    stims=('st', 'nst')):
+    """
+
+    :param folder: folder that contains the images
+    :param channels: Cerulean and/or Venus
+    :param stims:
+    :param genotypes:
+    :return: list of image paths
+    """
+    paths = glob(join(folder, '**/*.tif'), recursive=True)
+    paths.extend(glob(join(folder, '**/*.png'), recursive=True))
+    image_paths = []
+    for path in paths:
+        channel, genotype, stim, pos = get_image_description(path)
+        if channel not in channels:
+            continue
+        if genotype not in genotypes:
+            continue
+        if stim not in stims:
+            continue
+        image_paths.append(path)
+    return image_paths
+
+
+def load_image(image_path):
+    """Load the specified image and return a [H,W,_] Numpy array.
+    """
+    # Load image
+    image = skimage.io.imread(image_path)
+
+    if image.ndim < 3:
+        image = image[..., np.newaxis]
+    if image.shape[2] == 3:
+        if (image[:, :, 1] == 0).all():
+            # images are stored in RGB format, but the G channel is empty
+            image = image[:, :, [0, 2]]
+    # If has an alpha channel, remove it for consistency
+    if image.shape[-1] == 4:
+        image = image[..., :3]
+    return image
