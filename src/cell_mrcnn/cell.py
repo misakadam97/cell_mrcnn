@@ -30,8 +30,7 @@ Usage: import the module (see Jupyter notebooks for examples), or run from
 import os
 from os.path import join
 import numpy as np
-from cell_mrcnn.utils import get_weights_path_from_config_file, \
-    get_cell_mrcnn_path_from_config_file
+from cell_mrcnn.utils import get_cell_mrcnn_path_from_config_file
 from matplotlib import pyplot as plt
 from imgaug import augmenters as iaa
 import tensorflow as tf
@@ -43,8 +42,9 @@ from cell_mrcnn import model as modellib, utils
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-DEFAULT_LOGS_DIR = join(get_weights_path_from_config_file(), "logs")
-dataset_dir = join(get_cell_mrcnn_path_from_config_file(), 'annotated_datasets')
+root = get_cell_mrcnn_path_from_config_file()
+DEFAULT_LOGS_DIR = join(root, "logs")
+dataset_dir = join(root, 'data/annotated_datasets')
 
 ############################################################
 #  Configurations
@@ -58,8 +58,8 @@ class CellConfig(Config):
     # Give the configuration a recognizable name
     NAME = "cell"
 
-    IMAGE_CHANNEL_COUNT = 2
-    MEAN_PIXEL = np.array([4.5, 1.5])
+    IMAGE_CHANNEL_COUNT = 1
+    MEAN_PIXEL = np.array([5.44])
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
@@ -71,7 +71,7 @@ class CellConfig(Config):
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 200
     # todo: 0.98 might be too high
-    DETECTION_MIN_CONFIDENCE = 0.98
+    DETECTION_MIN_CONFIDENCE = 0.9
 
     # Length of square anchor side in pixels
     # Each scale is associated with a level of the pyramid
@@ -238,7 +238,7 @@ def train(model):
     print("Train all layers")
     model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=35,
+                epochs=5,
                 augmentation=augmentation,
                 layers='all')
 
