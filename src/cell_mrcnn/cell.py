@@ -247,109 +247,18 @@ def train(model):
 #  Training
 ############################################################
 
-if __name__ == '__main__':
-    # config = CellConfig()
-    # DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
-    # with tf.device(DEVICE):
-    #     model = modellib.MaskRCNN(mode="training", config=config,
-    #                               model_dir=DEFAULT_LOGS_DIR)
-    #
-    # train(model)
-
-
-    # for model debugging
-    # import keras
-    # model.keras_model.summary()
-    # keras.utils.plot_model(model.keras_model, 'mrcnn_resnet18.png',
-    #                        show_shapes=True)
-
-
-
-    #
-    # import argparse
-    #
-    # # Parse command line arguments
-    # parser = argparse.ArgumentParser(
-    #     description='Train Mask R-CNN to detect ct nodules.')
-    # parser.add_argument("command",
-    #                     metavar="<command>",
-    #                     help="'train' or 'splash'")
-    # parser.add_argument('--dataset', required=False,
-    #                     metavar="/path/to/cell/dataset/",
-    #                     help='Directory of the cell dataset')
-    # parser.add_argument('--weights', required=True,
-    #                     metavar="/path/to/weights.h5",
-    #                     help="Path to weights .h5 file or 'coco'")
-    # parser.add_argument('--logs', required=False,
-    #                     default=DEFAULT_LOGS_DIR,
-    #                     metavar="/path/to/logs/",
-    #                     help='Logs and checkpoints directory (default=logs/)')
-    # parser.add_argument('--image', required=False,
-    #                     metavar="path or URL to image",
-    #                     help='Image to apply the color splash effect on')
-    # parser.add_argument('--video', required=False,
-    #                     metavar="path or URL to video",
-    #                     help='Video to apply the color splash effect on')
-    # args = parser.parse_args()
-    #
-    # # Validate arguments
-    # if args.command == "train":
-    #     assert args.dataset, "Argument --dataset is required for training"
-    # elif args.command == "splash":
-    #     assert args.image or args.video,\
-    #            "Provide --image or --video to apply color splash"
-    #
-    # print("Weights: ", args.weights)
-    # print("Dataset: ", args.dataset)
-    # print("Logs: ", args.logs)
-    #
-    # # Configurations
-    # if args.command == "train":
-    #     config = CtConfig()
-    # else:
-    #     config = CtInferenceConfig()
-    # config.display()
-    #
-    # # Create model
-    # if args.command == "train":
-    #     model = modellib.MaskRCNN(mode="training", config=config,
-    #                               model_dir=args.logs)
-    # else:
-    #     model = modellib.MaskRCNN(mode="inference", config=config,
-    #                               model_dir=args.logs)
-    #
-    # # Select weights file to load
-    # if args.weights.lower() == "coco":
-    #     weights_path = COCO_WEIGHTS_PATH
-    #     # Download weights file
-    #     if not os.path.exists(weights_path):
-    #         utils.download_trained_weights(weights_path)
-    # elif args.weights.lower() == "last":
-    #     # Find last trained weights
-    #     weights_path = model.find_last()
-    # elif args.weights.lower() == "imagenet":
-    #     # Start from ImageNet trained weights
-    #     weights_path = model.get_imagenet_weights()
-    # else:
-    #     weights_path = args.weights
-    #
-    # # Load weights
-    # print("Loading weights ", weights_path)
-    # if args.weights.lower() == "coco":
-    #     # Exclude the last layers because they require a matching
-    #     # number of classes
-    #     model.load_weights(weights_path, by_name=True, exclude=[
-    #         "mrcnn_class_logits", "mrcnn_bbox_fc",
-    #         "mrcnn_bbox", "mrcnn_mask", "conv1"])
-    # else:
-    #     model.load_weights(weights_path, by_name=True)
-    #
-    # # Train or evaluate
-    # if args.command == "train":
-    #     train(model)
-    # elif args.command == "splash":
-    #     detect_and_color_splash(model, image_path=args.image,
-    #                             video_path=args.video)
-    # else:
-    #     print("'{}' is not recognized. "
-    #           "Use 'train' or 'splash'".format(args.command))
+# if __name__ == '__main__':
+#     config = CellConfig()
+#     DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
+#     with tf.device(DEVICE):
+#         model = modellib.MaskRCNN(mode="training", config=config,
+#                                   model_dir=DEFAULT_LOGS_DIR)
+#
+#     train(model)
+#
+#
+#     for model debugging
+#     import keras
+#     model.keras_model.summary()
+#     keras.utils.plot_model(model.keras_model, 'mrcnn_resnet18.png',
+#                            show_shapes=True)
