@@ -14,8 +14,8 @@ from datetime import datetime
 from shutil import copyfile
 
 # data directory
-data_dir = get_cell_mrcnn_path_from_config_file()
-dataset_dir = join(data_dir, 'annotated_datasets/')
+# data_dir = get_cell_mrcnn_path_from_config_file()
+# dataset_dir = join(data_dir, 'annotated_datasets/')
 
 # Import Mask RCNN
 from cell_mrcnn import utils

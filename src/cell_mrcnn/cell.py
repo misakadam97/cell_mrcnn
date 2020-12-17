@@ -42,9 +42,9 @@ from cell_mrcnn import model as modellib, utils
 
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
-root = get_cell_mrcnn_path_from_config_file()
-DEFAULT_LOGS_DIR = join(root, "logs")
-dataset_dir = join(root, 'data/annotated_datasets')
+# root = get_cell_mrcnn_path_from_config_file()
+# DEFAULT_LOGS_DIR = join(root, "logs")
+# dataset_dir = join(root, 'data/annotated_datasets')
 
 ############################################################
 #  Configurations
@@ -248,13 +248,13 @@ def train(model):
 ############################################################
 
 if __name__ == '__main__':
-    config = CellConfig()
-    DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
-    with tf.device(DEVICE):
-        model = modellib.MaskRCNN(mode="training", config=config,
-                                  model_dir=DEFAULT_LOGS_DIR)
-
-    train(model)
+    # config = CellConfig()
+    # DEVICE = "/gpu:0"  # /cpu:0 or /gpu:0
+    # with tf.device(DEVICE):
+    #     model = modellib.MaskRCNN(mode="training", config=config,
+    #                               model_dir=DEFAULT_LOGS_DIR)
+    #
+    # train(model)
 
 
     # for model debugging
