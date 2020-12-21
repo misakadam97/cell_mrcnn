@@ -153,10 +153,10 @@ def read_roi_or_roiset(impath):
     # if roi is in roi format(image only contains 1 roi)
     elif path.isfile(join(impath + '.roi')):
         rois = read_roi.read_roi_file(join(impath + '.roi'))
+        return rois
     else:
         print("rois couldn't be found for:", impath)
-
-    return rois
+   
 
 
 def calc_avg_pixel_value(image_paths, output_file=None):
