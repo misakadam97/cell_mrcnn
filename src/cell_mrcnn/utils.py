@@ -1222,9 +1222,9 @@ def get_image_paths(folder, channels=('Cerulean', 'Venus'),
     """
 
     :param folder: folder that contains the images
-    :param channels: Cerulean and/or Venus
-    :param stims:
-    :param genotypes:
+    :param channels: 'Cerulean', 'Venus'
+    :param stims: 'st', 'nst'
+    :param genotypes: 'wt', 'Q', 'L'
     :return: list of image paths
     """
     paths = glob(join(folder, '**/*.tif'), recursive=True)

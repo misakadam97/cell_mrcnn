@@ -526,3 +526,10 @@ def show_im_and_mask(im, mask):
     fig.add_subplot(1, 2, 2)
     plt.imshow(mask)
     plt.show()
+
+
+def cell2rgb(image):
+    # todo: this should handle gray and 2 channel images as well
+#     zeros = np.zeros((image.shape[0], image.shape[1])).astype(np.uint8)
+    image_rgb = np.stack([image[:,:,0], image[:,:,0], image[:,:,0]], axis=2)
+    return image_rgb
